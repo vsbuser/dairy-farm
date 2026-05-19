@@ -35,7 +35,8 @@ COMMANDS = [
         fecha_nacimiento DATE,
         lote_id         INTEGER REFERENCES tabla_lotes(lote_id),
         dieta_id        INTEGER REFERENCES tabla_dieta(dieta_id),
-        estado          VARCHAR(20) DEFAULT 'activa'
+        estado          VARCHAR(20) DEFAULT 'activa',
+        categoria       VARCHAR(20) DEFAULT 'lactancia'
     )""",
     """CREATE TABLE IF NOT EXISTS tabla_leche (
         registro_id SERIAL PRIMARY KEY,

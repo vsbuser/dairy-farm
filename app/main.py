@@ -97,11 +97,19 @@ def dashboard() -> None:
             GROUP BY DATE(fecha_hora)
             ORDER BY fecha
         """)
+        df_categorias = read_sql("""
+            SELECT COALESCE(categoria, 'lactancia') AS categoria,
+                   COUNT(*)::int                    AS total
+            FROM tabla_vacas
+            WHERE estado = 'activa'
+            GROUP BY COALESCE(categoria, 'lactancia')
+            ORDER BY categoria DESC
+        """)
         error_msg = None
     except Exception as exc:
         total_vacas = total_dietas = 0
         litros_hoy  = 0.0
-        df_stock = df_prod = pd.DataFrame()
+        df_stock = df_prod = df_categorias = pd.DataFrame()
         error_msg = str(exc)
 
     # ── Métricas ──
@@ -152,6 +160,30 @@ def dashboard() -> None:
                         "smooth":    True,
                         "areaStyle": {},
                         "itemStyle": {"color": "#16a34a"},
+                    }],
+                }).classes("w-full h-64")
+
+        with ui.card().classes("flex-1"):
+            ui.label("Vacas en Lactancia vs Secas").classes("font-bold mb-2")
+            if not df_categorias.empty:
+                pie_data = [
+                    {"value": int(row["total"]), "name": row["categoria"].capitalize()}
+                    for _, row in df_categorias.iterrows()
+                ]
+                colores = {"Lactancia": "#1d4ed8", "Seca": "#f59e0b"}
+                for d in pie_data:
+                    d["itemStyle"] = {"color": colores.get(d["name"], "#6b7280")}
+                ui.echart({
+                    "tooltip": {"trigger": "item", "formatter": "{b}: {c} ({d}%)"},
+                    "legend":  {"bottom": "2%", "left": "center"},
+                    "series":  [{
+                        "type":       "pie",
+                        "radius":     ["45%", "72%"],
+                        "avoidLabelOverlap": True,
+                        "itemStyle":  {"borderRadius": 8, "borderColor": "#fff", "borderWidth": 2},
+                        "label":      {"show": True, "formatter": "{b}\n{c} vacas"},
+                        "emphasis":   {"label": {"show": True, "fontSize": 14, "fontWeight": "bold"}},
+                        "data":       pie_data,
                     }],
                 }).classes("w-full h-64")
 
