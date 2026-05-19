@@ -343,12 +343,20 @@ def leche_page() -> None:
     ui.label("Registro de Producción Láctea").classes("text-2xl font-bold m-4")
 
     try:
-        vacas_opts = ["(seleccionar)"] + list(
-            read_sql("SELECT nombre FROM tabla_vacas WHERE estado='activa' ORDER BY nombre")["nombre"]
-        )
+        vacas_data = read_sql("""
+            SELECT vaca_id,
+                   nombre,
+                   COALESCE(rfid_code, '') AS rfid,
+                   COALESCE(categoria, 'lactancia') AS categoria
+            FROM tabla_vacas
+            WHERE estado = 'activa'
+            ORDER BY nombre
+        """).to_dict("records")
     except Exception as exc:
         ui.label(f"Error de conexión: {exc}").classes("text-red m-4")
         return
+
+    estado = {"vaca_id": None, "nombre": ""}
 
     @ui.refreshable
     def tabla_leche() -> None:
@@ -365,33 +373,89 @@ def leche_page() -> None:
         except Exception as exc:
             ui.label(f"Error: {exc}").classes("text-red")
 
+    # ── Buscador ────────────────────────────────────────
     with ui.card().classes("mx-4 mb-4"):
-        ui.label("Registrar Ordeñe").classes("text-lg font-bold mb-3")
-        with ui.row().classes("gap-4 items-end"):
-            vaca   = ui.select(vacas_opts, value=vacas_opts[0], label="Animal").classes("w-64")
-            litros = ui.number("Litros producidos", value=0.0, min=0, step=0.5).classes("w-48")
+        ui.label("Buscar Vaca").classes("text-lg font-bold mb-3")
+
+        search      = ui.input(placeholder="Escribí nombre o RFID...").classes("w-full")
+        resultados  = ui.column().classes("w-full gap-1 mt-1")
+        sel_label   = ui.label("").classes("text-blue-700 font-semibold mt-2 min-h-6")
+
+        with ui.row().classes("gap-4 items-end mt-4") as form_row:
+            litros = ui.number("Litros producidos", value=0.0, min=0, step=0.5).classes("w-52")
 
             def guardar_leche() -> None:
-                if vaca.value == "(seleccionar)":
-                    ui.notify("Selecciona un animal.", type="warning")
+                if not estado["vaca_id"]:
+                    ui.notify("Buscá y seleccioná una vaca primero.", type="warning")
                     return
                 if not litros.value or litros.value <= 0:
                     ui.notify("Los litros deben ser mayor a 0.", type="warning")
                     return
                 try:
                     conn = conectar(); cur = conn.cursor()
-                    cur.execute("SELECT vaca_id FROM tabla_vacas WHERE nombre=%s", (vaca.value,))
-                    row = cur.fetchone(); vaca_id = row[0] if row else None
-                    cur.execute("INSERT INTO tabla_leche (vaca_id, litros) VALUES (%s,%s)", (vaca_id, litros.value))
+                    cur.execute(
+                        "INSERT INTO tabla_leche (vaca_id, litros) VALUES (%s, %s)",
+                        (estado["vaca_id"], litros.value),
+                    )
                     conn.commit(); cur.close(); conn.close()
-                    ui.notify(f"{litros.value} lts registrados para {vaca.value}.", type="positive")
+                    ui.notify(
+                        f"{litros.value} lts registrados para {estado['nombre']}.",
+                        type="positive",
+                    )
                     litros.value = 0.0
                     tabla_leche.refresh()
                 except Exception as exc:
                     ui.notify(f"Error: {exc}", type="negative")
 
-            ui.button("REGISTRAR ORDEÑE", on_click=guardar_leche).classes("bg-blue-700 text-white")
+            ui.button("REGISTRAR ORDEÑE", on_click=guardar_leche).classes(
+                "bg-blue-700 text-white"
+            )
 
+        form_row.set_visibility(False)
+
+        def seleccionar(vid: int, nombre: str) -> None:
+            estado["vaca_id"] = vid
+            estado["nombre"]  = nombre
+            sel_label.set_text(f"✓  {nombre}")
+            search.value = nombre
+            resultados.clear()
+            form_row.set_visibility(True)
+            litros.run_method("focus")
+
+        def buscar() -> None:
+            term = search.value.strip().lower()
+            resultados.clear()
+            # Limpiar selección si el usuario modificó el texto
+            if estado["nombre"] and term != estado["nombre"].lower():
+                estado["vaca_id"] = None
+                estado["nombre"]  = ""
+                sel_label.set_text("")
+                form_row.set_visibility(False)
+            if len(term) < 2:
+                return
+            matches = [
+                v for v in vacas_data
+                if term in v["nombre"].lower() or term in v["rfid"].lower()
+            ]
+            if not matches:
+                with resultados:
+                    ui.label("Sin resultados.").classes("text-grey-6 italic text-sm px-2")
+                return
+            with resultados:
+                for v in matches[:15]:
+                    cat_color = "blue" if v["categoria"] == "lactancia" else "amber"
+                    with ui.card().classes(
+                        "w-full p-2 cursor-pointer hover:bg-blue-50"
+                    ).style("border:1px solid #e5e7eb") as card:
+                        with ui.row().classes("items-center gap-3"):
+                            ui.label(v["nombre"]).classes("font-medium flex-1")
+                            ui.label(v["rfid"] or "—").classes("text-grey-6 text-xs w-28")
+                            ui.badge(v["categoria"]).props(f"color={cat_color}").classes("text-xs")
+                        card.on("click", lambda vid=v["vaca_id"], nom=v["nombre"]: seleccionar(vid, nom))
+
+        search.on("input", lambda: buscar())
+
+    # ── Historial ───────────────────────────────────────
     with ui.card().classes("mx-4 mb-4"):
         ui.label("Últimos Registros").classes("text-lg font-bold mb-2")
         tabla_leche()
