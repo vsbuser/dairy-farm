@@ -109,6 +109,9 @@ python scripts/seed_finanzas.py
 
 # Completa el resto: grupos, salud, insumos y mantenimiento
 python scripts/seed_completo.py
+
+# Empleados y pagos
+python scripts/seed_empleados.py
 ```
 
 ---
@@ -161,7 +164,8 @@ dairy-farm/
 │   ├── add_vacas_produccion.py
 │   ├── seed_reproduccion.py ← Datos de fertilizaciones y partos
 │   ├── seed_finanzas.py     ← Datos de ingresos y gastos
-│   └── seed_completo.py     ← Completa datos faltantes en todas las secciones
+│   ├── seed_completo.py     ← Completa datos faltantes en todas las secciones
+│   └── seed_empleados.py   ← Datos de empleados y pagos
 └── README.md
 ```
 
@@ -180,6 +184,8 @@ dairy-farm/
 | 🚜 Maquinaria | Registro de máquinas y mantenimientos |
 | 🐣 Reproducción | Fertilizaciones y partos con fechas estimadas |
 | 💰 Finanzas | Ingresos, egresos y balance mensual |
+| 👷 Empleados | Registro de personal, sueldos e historial de pagos |
+| 📊 Reportes | Gráficos y tablas analíticas de todas las secciones |
 
 ---
 
