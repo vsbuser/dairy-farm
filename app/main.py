@@ -188,6 +188,20 @@ def dashboard() -> None:
         litros_hoy   = float(read_sql(
             "SELECT COALESCE(SUM(litros),0) FROM tabla_leche WHERE DATE(fecha_hora)=CURRENT_DATE"
         ).iloc[0, 0])
+        litros_ayer  = float(read_sql(
+            "SELECT COALESCE(SUM(litros),0) FROM tabla_leche WHERE DATE(fecha_hora)=CURRENT_DATE-1"
+        ).iloc[0, 0])
+        vacas_tratamiento = int(read_sql("""
+            SELECT COUNT(DISTINCT vaca_id) FROM tabla_salud
+            WHERE tipo_evento IN ('Tratamiento','Enfermedad')
+              AND fecha >= CURRENT_DATE - 7
+        """).iloc[0, 0])
+        balance_mes = float(read_sql("""
+            SELECT COALESCE(SUM(CASE WHEN tipo='Ingreso' THEN monto ELSE -monto END),0)
+            FROM tabla_finanzas
+            WHERE DATE_TRUNC('month',fecha)=DATE_TRUNC('month',CURRENT_DATE)
+        """).iloc[0, 0])
+        litros_por_vaca = round(litros_hoy / total_vacas, 1) if total_vacas else 0.0
         df_stock = read_sql(
             "SELECT nombre_insumo, stock_actual_kg FROM tabla_insumos ORDER BY stock_actual_kg DESC"
         )
@@ -214,46 +228,121 @@ def dashboard() -> None:
             FROM tabla_reproduccion r
             JOIN tabla_vacas v ON r.vaca_id = v.vaca_id
             WHERE r.tipo_evento = 'Fertilización'
-              AND r.fecha_parto_esperado BETWEEN CURRENT_DATE AND CURRENT_DATE + 14
+              AND r.fecha_parto_esperado BETWEEN CURRENT_DATE AND CURRENT_DATE + 30
             ORDER BY r.fecha_parto_esperado
+        """)
+        maquinaria_vencida = read_sql("""
+            SELECT DISTINCT m.nombre, mn.proximo_mantenimiento
+            FROM tabla_mantenimiento mn
+            JOIN tabla_maquinaria m ON mn.maquina_id = m.maquina_id
+            WHERE mn.proximo_mantenimiento < CURRENT_DATE
+              AND mn.maquinaria_id = (
+                SELECT MAX(mn2.maquinaria_id) FROM tabla_mantenimiento mn2
+                WHERE mn2.maquina_id = mn.maquina_id
+              )
+            ORDER BY mn.proximo_mantenimiento
+        """) if False else read_sql("""
+            SELECT m.nombre,
+                   MAX(mn.proximo_mantenimiento) AS proximo_mantenimiento
+            FROM tabla_mantenimiento mn
+            JOIN tabla_maquinaria m ON mn.maquina_id = m.maquina_id
+            GROUP BY m.maquina_id, m.nombre
+            HAVING MAX(mn.proximo_mantenimiento) < CURRENT_DATE
+            ORDER BY MAX(mn.proximo_mantenimiento)
         """)
         error_msg = None
     except Exception as exc:
-        total_vacas = total_dietas = 0
-        litros_hoy  = 0.0
+        total_vacas = total_dietas = vacas_tratamiento = 0
+        litros_hoy = litros_ayer = litros_por_vaca = balance_mes = 0.0
         df_stock = df_prod = df_categorias = pd.DataFrame()
-        stock_critico = partos_inminentes = pd.DataFrame()
+        stock_critico = partos_inminentes = maquinaria_vencida = pd.DataFrame()
         error_msg = str(exc)
 
     # ── Alertas ──
-    if not stock_critico.empty or not partos_inminentes.empty:
+    _hay_alertas = (
+        not stock_critico.empty or not partos_inminentes.empty
+        or not maquinaria_vencida.empty or vacas_tratamiento > 0
+    )
+    if _hay_alertas:
         with ui.card().classes("mx-4 mt-4 mb-2 bg-amber-50 border-l-4 border-amber-400 p-4"):
             ui.label("⚠  Alertas que necesitan tu atención").classes("font-bold text-amber-800 mb-2")
+            if vacas_tratamiento > 0:
+                ui.label(
+                    f"💊  {vacas_tratamiento} animal{'es' if vacas_tratamiento != 1 else ''} en tratamiento esta semana — revisá Salud."
+                ).classes("text-sm text-amber-900 mb-1")
             for _, row in stock_critico.iterrows():
                 ui.label(
                     f"📦  Stock crítico: {row['nombre_insumo']} — quedan {row['stock_actual_kg']:.0f} kg"
                 ).classes("text-sm text-amber-900 mb-1")
             for _, row in partos_inminentes.iterrows():
                 dias = int(row["dias"])
-                txt = "¡Hoy!" if dias == 0 else f"en {dias} día{'s' if dias != 1 else ''}"
+                if dias <= 7:
+                    txt = "¡Hoy!" if dias == 0 else f"¡En {dias} día{'s' if dias != 1 else ''}!"
+                    style = "text-sm text-red-700 font-semibold mb-1"
+                else:
+                    txt = f"En {dias} días"
+                    style = "text-sm text-amber-900 mb-1"
                 ui.label(
-                    f"🐣  Parto esperado de {row['nombre']} — {txt} ({row['fecha_parto_esperado']})"
+                    f"🐣  Parto de {row['nombre']} — {txt} ({row['fecha_parto_esperado']})"
+                ).classes(style)
+            for _, row in maquinaria_vencida.iterrows():
+                ui.label(
+                    f"🚜  Mantenimiento vencido: {row['nombre']} (vencía {row['proximo_mantenimiento']})"
                 ).classes("text-sm text-amber-900 mb-1")
 
     # ── Métricas ──
-    with ui.row().classes("w-full gap-4 px-4 mt-4"):
-        for titulo, valor, subtitulo, href in [
-            ("🐄 Vacas Activas", str(total_vacas),    "en producción",        "/vacas"),
-            ("🥗 Dietas",        str(total_dietas),   "planes alimenticios",  "/dietas"),
-            ("🥛 Litros Hoy",    f"{litros_hoy:.1f}", "producidos hoy",       "/leche"),
-        ]:
-            with ui.card().classes("flex-1 p-6 text-center cursor-pointer hover:shadow-md").on(
-                "click", lambda h=href: ui.navigate.to(h)
-            ):
-                ui.label(titulo).classes("text-xs text-grey-5 uppercase tracking-widest")
-                ui.label(valor).classes("text-5xl font-bold text-blue-800 mt-1")
-                ui.label(subtitulo).classes("text-xs text-grey-5 mt-1")
-                ui.label("Ver →").classes("text-xs text-blue-500 mt-2")
+    _dif_litros = litros_hoy - litros_ayer
+    _dif_txt    = (f"↑ {_dif_litros:+.0f} L vs ayer" if _dif_litros >= 0
+                   else f"↓ {_dif_litros:.0f} L vs ayer")
+    _dif_color  = "text-green-600" if _dif_litros >= 0 else "text-red-500"
+    _bal_color  = "text-green-700 font-bold" if balance_mes >= 0 else "text-red-600 font-bold"
+    _trat_color = "text-orange-600 font-bold" if vacas_tratamiento > 0 else "text-blue-800"
+
+    with ui.row().classes("w-full gap-3 px-4 mt-4 flex-wrap"):
+        # Vacas activas
+        with ui.card().classes("flex-1 min-w-36 p-5 text-center cursor-pointer hover:shadow-md").on(
+            "click", lambda: ui.navigate.to("/vacas")
+        ):
+            ui.label("🐄 Vacas Activas").classes("text-xs text-grey-5 uppercase tracking-widest")
+            ui.label(str(total_vacas)).classes("text-5xl font-bold text-blue-800 mt-1")
+            ui.label("en producción").classes("text-xs text-grey-5 mt-1")
+            ui.label("Ver →").classes("text-xs text-blue-500 mt-2")
+
+        # Litros hoy
+        with ui.card().classes("flex-1 min-w-36 p-5 text-center cursor-pointer hover:shadow-md").on(
+            "click", lambda: ui.navigate.to("/leche")
+        ):
+            ui.label("🥛 Litros Hoy").classes("text-xs text-grey-5 uppercase tracking-widest")
+            ui.label(f"{litros_hoy:.0f}").classes("text-5xl font-bold text-blue-800 mt-1")
+            ui.label(_dif_txt).classes(f"text-xs {_dif_color} mt-1 font-medium")
+            ui.label("Ver →").classes("text-xs text-blue-500 mt-2")
+
+        # L/vaca/día
+        with ui.card().classes("flex-1 min-w-36 p-5 text-center cursor-pointer hover:shadow-md").on(
+            "click", lambda: ui.navigate.to("/reportes")
+        ):
+            ui.label("📈 L/Vaca/Día").classes("text-xs text-grey-5 uppercase tracking-widest")
+            ui.label(f"{litros_por_vaca:.1f}").classes("text-5xl font-bold text-blue-800 mt-1")
+            ui.label("eficiencia hoy").classes("text-xs text-grey-5 mt-1")
+            ui.label("Ver reportes →").classes("text-xs text-blue-500 mt-2")
+
+        # Vacas en tratamiento
+        with ui.card().classes("flex-1 min-w-36 p-5 text-center cursor-pointer hover:shadow-md").on(
+            "click", lambda: ui.navigate.to("/salud")
+        ):
+            ui.label("💊 En Tratamiento").classes("text-xs text-grey-5 uppercase tracking-widest")
+            ui.label(str(vacas_tratamiento)).classes(f"text-5xl {_trat_color} mt-1")
+            ui.label("últimos 7 días").classes("text-xs text-grey-5 mt-1")
+            ui.label("Ver salud →").classes("text-xs text-blue-500 mt-2")
+
+        # Balance del mes
+        with ui.card().classes("flex-1 min-w-36 p-5 text-center cursor-pointer hover:shadow-md").on(
+            "click", lambda: ui.navigate.to("/finanzas")
+        ):
+            ui.label("💰 Balance Mes").classes("text-xs text-grey-5 uppercase tracking-widest")
+            ui.label(f"${balance_mes:,.0f}").classes(f"text-3xl {_bal_color} mt-2")
+            ui.label("ingresos – egresos").classes("text-xs text-grey-5 mt-1")
+            ui.label("Ver finanzas →").classes("text-xs text-blue-500 mt-2")
 
     if error_msg:
         ui.label(f"No se pudo conectar a la base de datos. Avisá al administrador.").classes("text-red m-4 font-semibold")
@@ -372,12 +461,30 @@ def vacas_page() -> None:
     def tabla_vacas() -> None:
         try:
             df = read_sql("""
-                SELECT COALESCE(nombre,'—') AS "Nombre / Etiqueta",
-                       COALESCE(grupo,'—')  AS "Grupo",
-                       estado               AS "Estado"
+                SELECT vaca_id                         AS id,
+                       COALESCE(nombre,'—')            AS "Nombre / Etiqueta",
+                       COALESCE(grupo,'—')             AS "Grupo",
+                       estado                          AS "Estado"
                 FROM tabla_vacas ORDER BY grupo, nombre
             """)
-            df_to_table(df)
+            if df.empty:
+                estado_vacio("Todavía no hay animales en el sistema.")
+                return
+            cols = [
+                {"name": "id",     "label": "",                  "field": "id",     "sortable": False},
+                {"name": "nombre", "label": "Nombre / Etiqueta", "field": "Nombre / Etiqueta", "sortable": True},
+                {"name": "grupo",  "label": "Grupo",             "field": "Grupo",  "sortable": True},
+                {"name": "estado", "label": "Estado",            "field": "Estado", "sortable": True},
+            ]
+            rows = json.loads(df.to_json(orient="records", default_handler=str))
+            tbl = ui.table(columns=cols, rows=rows, pagination=20).classes("w-full")
+            tbl.add_slot("body-cell-id", """
+                <q-td :props="props">
+                  <q-btn flat dense size="sm" color="primary" label="Ver ficha →"
+                    @click="$parent.$emit('ver', props.row)" />
+                </q-td>
+            """)
+            tbl.on("ver", lambda e: ui.navigate.to(f"/vaca/{e.args['id']}"))
         except Exception as exc:
             ui.label("Error al cargar el listado.").classes("text-red")
 
@@ -2443,6 +2550,124 @@ def reportes_page() -> None:
                             df_mant_mes_t = df_mant_mes[["mes","cantidad","costo"]].copy()
                             df_mant_mes_t.columns = ["Mes","Cantidad","Costo Total $"]
                             df_to_table(df_mant_mes_t, pagination=12)
+
+
+# ── FICHA INDIVIDUAL DE VACA ─────────────────────────────────────────────────
+
+@ui.page("/vaca/{vaca_id}")
+def ficha_vaca(vaca_id: int) -> None:
+    nav("/vacas")
+    try:
+        df_info = read_sql("""
+            SELECT nombre, COALESCE(grupo,'—') AS grupo, estado,
+                   TO_CHAR(CURRENT_DATE - fecha_ingreso,'FM999') AS dias_en_granja
+            FROM tabla_vacas WHERE vaca_id = %s
+        """, params=(vaca_id,))
+        if df_info.empty:
+            ui.label("Animal no encontrado.").classes("m-8 text-red font-semibold")
+            return
+        info = df_info.iloc[0]
+
+        df_prod = read_sql("""
+            SELECT TO_CHAR(DATE(fecha_hora),'DD/MM') AS dia,
+                   DATE(fecha_hora) AS dia_ord,
+                   ROUND(SUM(litros)::numeric,1)::float AS litros
+            FROM tabla_leche
+            WHERE vaca_id = %s AND fecha_hora >= CURRENT_DATE - 30
+            GROUP BY DATE(fecha_hora) ORDER BY dia_ord
+        """, params=(vaca_id,))
+
+        df_salud = read_sql("""
+            SELECT TO_CHAR(fecha,'DD/MM/YYYY') AS "Fecha",
+                   tipo_evento                 AS "Tipo",
+                   descripcion                 AS "Descripción",
+                   COALESCE(veterinario,'—')   AS "Veterinario",
+                   costo                       AS "Costo $"
+            FROM tabla_salud WHERE vaca_id = %s
+            ORDER BY fecha DESC LIMIT 15
+        """, params=(vaca_id,))
+
+        df_reprod = read_sql("""
+            SELECT TO_CHAR(fecha_evento,'DD/MM/YYYY')       AS "Fecha",
+                   tipo_evento                               AS "Evento",
+                   COALESCE(tipo_fertilizacion,'—')         AS "Fertilización",
+                   TO_CHAR(fecha_parto_esperado,'DD/MM/YYYY') AS "Parto esperado",
+                   COALESCE(resultado_parto,'—')            AS "Resultado",
+                   COALESCE(observaciones,'—')              AS "Observaciones"
+            FROM tabla_reproduccion WHERE vaca_id = %s
+            ORDER BY fecha_evento DESC
+        """, params=(vaca_id,))
+
+        total_litros = float(read_sql(
+            "SELECT COALESCE(SUM(litros),0) FROM tabla_leche WHERE vaca_id=%s", params=(vaca_id,)
+        ).iloc[0, 0])
+        prom_litros = float(read_sql(
+            "SELECT COALESCE(AVG(litros),0) FROM tabla_leche WHERE vaca_id=%s", params=(vaca_id,)
+        ).iloc[0, 0])
+
+        error_msg = None
+    except Exception as exc:
+        error_msg = str(exc)
+
+    if error_msg:
+        ui.label(f"Error al cargar la ficha: {error_msg}").classes("m-8 text-red")
+        return
+
+    # Header
+    with ui.row().classes("px-4 pt-4 items-center gap-4"):
+        ui.button("← Volver", on_click=lambda: ui.navigate.to("/vacas")).classes(
+            "bg-grey-2 text-grey-8 font-medium px-4 py-2"
+        )
+        with ui.column().classes("gap-0"):
+            ui.label(f"🐄 {info['nombre']}").classes("text-2xl font-bold")
+            ui.label(
+                f"Grupo: {info['grupo']}  •  Estado: {info['estado']}  •  {info['dias_en_granja']} días en la granja"
+            ).classes("text-sm text-grey-6")
+
+    # KPIs de la vaca
+    with ui.row().classes("w-full gap-4 px-4 mt-4"):
+        for titulo, valor, sub in [
+            ("🥛 Total producido", f"{total_litros:,.0f} L", "acumulado histórico"),
+            ("📊 Promedio/ordeñe", f"{prom_litros:.1f} L",   "por sesión de ordeñe"),
+            ("💊 Eventos de salud", str(len(df_salud)),       "registros encontrados"),
+            ("🐣 Eventos reproductivos", str(len(df_reprod)), "fertilizaciones/partos"),
+        ]:
+            with ui.card().classes("flex-1 p-5 text-center"):
+                ui.label(titulo).classes("text-xs text-grey-5 uppercase tracking-widest")
+                ui.label(valor).classes("text-3xl font-bold text-blue-800 mt-1")
+                ui.label(sub).classes("text-xs text-grey-5 mt-1")
+
+    # Producción últimos 30 días
+    with ui.card().classes("mx-4 mt-4"):
+        ui.label("📈 Producción — últimos 30 días").classes("font-bold mb-1")
+        ui.label("Litros por día de ordeñe.").classes("help-text mb-2")
+        if not df_prod.empty:
+            ui.echart({
+                "tooltip": {"trigger": "axis"},
+                "xAxis": {"type": "category", "data": list(df_prod["dia"]),
+                          "axisLabel": {"rotate": 30, "fontSize": 11}},
+                "yAxis": {"type": "value", "name": "lts"},
+                "series": [{"type": "line", "data": list(df_prod["litros"]),
+                            "smooth": True, "areaStyle": {}, "itemStyle": {"color": "#0ea5e9"}}],
+            }).classes("w-full h-56")
+        else:
+            estado_vacio("Sin registros de producción en los últimos 30 días.")
+
+    # Salud y reproducción lado a lado
+    with ui.row().classes("w-full gap-4 px-4 mt-4 pb-6"):
+        with ui.card().classes("flex-1"):
+            ui.label("💊 Historial Sanitario").classes("font-bold mb-2")
+            if df_salud.empty:
+                estado_vacio("Sin eventos de salud registrados.")
+            else:
+                df_to_table(df_salud, pagination=10)
+
+        with ui.card().classes("flex-1"):
+            ui.label("🐣 Historial Reproductivo").classes("font-bold mb-2")
+            if df_reprod.empty:
+                estado_vacio("Sin eventos reproductivos registrados.")
+            else:
+                df_to_table(df_reprod, pagination=10)
 
 
 ui.run(title="Dairy Farm Pro", port=8080, reload=False)
