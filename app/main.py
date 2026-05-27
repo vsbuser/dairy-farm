@@ -573,28 +573,28 @@ def salud_page() -> None:
 
     with ui.card().classes("mx-4 mb-4"):
         ui.label("Registrar una Atención").classes("text-lg font-bold mb-1")
-        ui.label("Completá los datos de la atención que recibió el animal.").classes("help-text mb-3")
+        ui.label("Preencha os dados do atendimento que o animal recebeu.").classes("help-text mb-3")
         aviso_requeridos()
         with ui.row().classes("w-full gap-4 mt-3"):
             with ui.column().classes("flex-1 gap-3"):
-                campo("¿A qué animal?", "", required=True)
+                campo("Qual animal?", "", required=True)
                 vaca = ui.select(vacas_opts, value=vacas_opts[0]).classes("w-full")
 
-                campo("Tipo de atención", "¿Qué tipo de intervención fue?", required=True)
+                campo("Tipo de atendimento", "Que tipo de intervenção foi?", required=True)
                 tipo = ui.select(TIPOS_EVENTO, value=TIPOS_EVENTO[0]).classes("w-full")
 
                 campo("Veterinário", "Nombre del veterinario o técnico que atendió (opcional).")
                 vet = ui.input(placeholder="Ej: Dr. Rodríguez").classes("w-full")
 
-                campo("Costo en pesos ($)", "Cuánto costó la atención. Podés dejarlo en 0 si no sabés.")
+                campo("Custo (R$)", "Quanto custou o atendimento. Pode deixar 0 se não souber.")
                 costo = ui.number(value=0.0, min=0, step=0.5).classes("w-full")
             with ui.column().classes("flex-1"):
-                campo("Descrição", "Anotá los detalles más importantes de la atención.")
+                campo("Descrição", "Anote os detalhes mais importantes do atendimento.")
                 descr = ui.textarea(placeholder="Ej: Se aplicó vacuna antiaftosa lote 2025. Sin reacciones.").classes("w-full h-52")
 
         def guardar_salud() -> None:
             if vaca.value == ELEGIR:
-                notificar_aviso("Primero elegí el animal que fue atendido.")
+                notificar_aviso("Primeiro escolha o animal que foi atendido.")
                 return
             try:
                 conn = conectar(); cur = conn.cursor()
@@ -627,7 +627,7 @@ def leche_page() -> None:
     nav("/leche")
     with ui.column().classes("px-4 pt-4 pb-1"):
         ui.label("🥛 Registro de Ordeñe").classes("text-2xl font-bold")
-        ui.label("Buscá el animal, indicá cuántos litros produjo y guardá.").classes("text-sm text-grey-6")
+        ui.label("Busque o animal, informe quantos litros produziu e salve.").classes("text-sm text-grey-6")
 
     try:
         vacas_data = read_sql("""
@@ -656,24 +656,24 @@ def leche_page() -> None:
             ui.label("Error al cargar registros.").classes("text-red")
 
     with ui.card().classes("mx-4 mb-4"):
-        ui.label("Paso 1 — Buscá el animal").classes("text-lg font-bold mb-1")
-        ui.label("Escribí las primeras letras del nombre o grupo para encontrarlo rápido.").classes("help-text mb-3")
+        ui.label("Passo 1 — Busque o animal").classes("text-lg font-bold mb-1")
+        ui.label("Digite as primeiras letras do nome ou grupo para encontrá-lo rapidamente.").classes("help-text mb-3")
 
-        search    = ui.input(placeholder="Escribí aquí el nombre del animal…").classes("w-full text-base")
+        search    = ui.input(placeholder="Digite aqui o nome do animal…").classes("w-full text-base")
         resultados = ui.column().classes("w-full gap-1 mt-1")
         sel_label  = ui.label("").classes("text-blue-700 font-semibold mt-2 min-h-6")
 
-        ui.label("Paso 2 — Ingresá los litros y guardá").classes("text-lg font-bold mb-1 mt-4")
+        ui.label("Passo 2 — Informe os litros e salve").classes("text-lg font-bold mb-1 mt-4")
         ui.label("Solo disponible después de seleccionar un animal.").classes("help-text mb-3")
 
         with ui.row().classes("gap-4 items-end mt-2") as form_row:
             with ui.column().classes("gap-0"):
-                campo("¿Cuántos litros produjo?", "Podés usar decimales. Ej: 12.5", required=True)
+                campo("Quantos litros produziu?", "Pode usar decimais. Ex: 12.5", required=True)
                 litros = ui.number(value=0.0, min=0, step=0.5).classes("w-52")
 
             def guardar_leche() -> None:
                 if not estado["vaca_id"]:
-                    notificar_aviso("Primero buscá y seleccioná el animal en el paso 1.")
+                    notificar_aviso("Primeiro busque e selecione o animal no passo 1.")
                     return
                 if not litros.value or litros.value <= 0:
                     notificar_aviso("Los litros deben ser un número mayor a 0.")
@@ -741,7 +741,7 @@ def dietas_page() -> None:
     nav("/dietas")
     with ui.column().classes("px-4 pt-4 pb-1"):
         ui.label("🥗 Dietas e Rações").classes("text-2xl font-bold")
-        ui.label("Cuánto come por día cada grupo de animales y qué ingredientes lleva su ración.").classes("text-sm text-grey-6")
+        ui.label("Quanto come por dia cada grupo de animais e quais ingredientes compõem a ração.").classes("text-sm text-grey-6")
 
     try:
         df_dietas = read_sql("SELECT dieta_id, nombre_dieta, descripcion_dieta FROM tabla_dieta ORDER BY dieta_id")
@@ -797,7 +797,7 @@ def dietas_page() -> None:
 
     with ui.card().classes("mx-4 mb-4"):
         ui.label("📊 Comparativa de Raciones — kg por animal por día").classes("font-bold mb-1")
-        ui.label("Pasá el mouse sobre cada barra de color para ver qué ingrediente representa.").classes("help-text mb-2")
+        ui.label("Passe o mouse sobre cada barra de cor para ver qual ingrediente ela representa.").classes("help-text mb-2")
         h = max(300, len(dietas) * 52)
         ui.echart({
             "tooltip": {"trigger": "axis", "axisPointer": {"type": "shadow"}},
@@ -845,7 +845,7 @@ def bodega_page() -> None:
     nav("/bodega")
     with ui.column().classes("px-4 pt-4 pb-1"):
         ui.label("📦 Bodega e Insumos").classes("text-2xl font-bold")
-        ui.label("Controlá el stock de alimentos y productos de tu granja.").classes("text-sm text-grey-6")
+        ui.label("Controle o estoque de alimentos e produtos da sua fazenda.").classes("text-sm text-grey-6")
 
     @ui.refreshable
     def contenido_bodega() -> None:
@@ -913,7 +913,7 @@ def bodega_page() -> None:
 
             with ui.card().classes("flex-1"):
                 ui.label("💰 Valor del inventario por insumo").classes("font-bold mb-1")
-                ui.label("Qué porción del presupuesto representa cada producto.").classes("help-text mb-2")
+                ui.label("Qual parte do orçamento representa cada produto.").classes("help-text mb-2")
                 pie_data = [{"value": float(r["valor_total"]), "name": r["nombre_insumo"]}
                             for _, r in df.iterrows() if float(r["valor_total"]) > 0]
                 if pie_data:
@@ -1002,18 +1002,18 @@ def bodega_page() -> None:
         aviso_requeridos()
         with ui.row().classes("gap-6 items-end flex-wrap mt-3"):
             with ui.column().classes("gap-1"):
-                campo("¿Qué insumo es?", "Escribí el nombre exacto. Si ya existe, se suma al stock.", required=True)
+                campo("Qual insumo?", "Digite o nome exato. Se já existir, será somado ao estoque.", required=True)
                 nombre_ins = ui.input(placeholder="Ej: Alfalfa, Maíz, Minerales…").classes("w-56")
             with ui.column().classes("gap-1"):
-                campo("Cantidad en kg", "Cuántos kilos vas a ingresar.", required=True)
+                campo("Quantidade em kg", "Quantos quilos você vai cadastrar.", required=True)
                 stock_kg = ui.number(value=0.0, min=0, step=10).classes("w-44")
             with ui.column().classes("gap-1"):
-                campo("Precio por kg ($)", "Cuánto pagaste por kilo. Opcional.")
+                campo("Preço por kg (R$)", "Quanto você pagou por quilo. Opcional.")
                 costo_kg = ui.number(value=0.0, min=0, step=0.01).classes("w-44")
 
             def guardar_insumo() -> None:
                 if not nombre_ins.value.strip():
-                    notificar_aviso("Escribí el nombre del insumo antes de guardar.")
+                    notificar_aviso("Digite o nome do insumo antes de salvar.")
                     return
                 if (stock_kg.value or 0) <= 0:
                     notificar_aviso("La cantidad en kg debe ser mayor a 0.")
@@ -1046,7 +1046,7 @@ def maquinaria_page() -> None:
     nav("/maquinaria")
     with ui.column().classes("px-4 pt-4 pb-1"):
         ui.label("🚜 Control de Maquinaria").classes("text-2xl font-bold")
-        ui.label("Registrá tus máquinas y llevá un historial de cada mantenimiento realizado.").classes("text-sm text-grey-6")
+        ui.label("Cadastre suas máquinas e mantenha um histórico de cada manutenção realizada.").classes("text-sm text-grey-6")
 
     @ui.refreshable
     def tabla_maquinas() -> None:
@@ -1088,13 +1088,13 @@ def maquinaria_page() -> None:
 
     with ui.card().classes("mx-4 mb-4"):
         ui.label("Registrar una Máquina").classes("text-lg font-bold mb-1")
-        ui.label("Completá los datos principales. Solo el Nombre es obligatorio.").classes("help-text mb-3")
+        ui.label("Preencha os dados principais. Somente o Nome é obrigatório.").classes("help-text mb-3")
         aviso_requeridos()
         with ui.row().classes("w-full gap-4 mt-3"):
             with ui.column().classes("flex-1 gap-3"):
                 campo("Nome da máquina", "Usá un nombre que la identifique claramente en tu campo.", required=True)
                 nombre_maq = ui.input(placeholder="Ej: Tractor Principal, Ordeñadora N°1").classes("w-full")
-                campo("Tipo de máquina", "¿Para qué se usa principalmente?")
+                campo("Tipo de máquina", "Para que é usada principalmente?")
                 tipo_maq = ui.select(TIPOS_MAQUINARIA, value=TIPOS_MAQUINARIA[0]).classes("w-full")
                 campo("Estado actual", "¿Cómo se encuentra hoy la máquina?")
                 estado_maq = ui.select(ESTADOS_MAQUINA, value=ESTADOS_MAQUINA[0]).classes("w-full")
@@ -1137,7 +1137,7 @@ def maquinaria_page() -> None:
 
     with ui.card().classes("mx-4 mb-4"):
         ui.label("Registrar un Mantenimiento").classes("text-lg font-bold mb-1")
-        ui.label("Anotá cada revisión o reparación para llevar el historial al día.").classes("help-text mb-3")
+        ui.label("Registre cada revisão ou reparo para manter o histórico atualizado.").classes("help-text mb-3")
         aviso_requeridos()
 
         @ui.refreshable
@@ -1151,29 +1151,29 @@ def maquinaria_page() -> None:
             if maquina_sel.value not in maq_opts:
                 maquina_sel.value = maq_opts[0]
 
-        campo("¿A qué máquina le hiciste el mantenimiento?", "", required=True)
+        campo("Qual máquina recebeu a manutenção?", "", required=True)
         maquina_sel = ui.select([ELEGIR], value=ELEGIR).classes("w-full mb-3")
         selector_maquina()
 
         with ui.row().classes("w-full gap-4"):
             with ui.column().classes("flex-1 gap-3"):
-                campo("Tipo de manutenção", "¿Qué clase de trabajo se realizó?")
+                campo("Tipo de manutenção", "Que tipo de trabalho foi realizado?")
                 tipo_mant = ui.select(TIPOS_MANTENCION, value=TIPOS_MANTENCION[0]).classes("w-full")
                 campo("Técnico o taller", "Quién hizo el trabajo.")
                 tecnico = ui.input(placeholder="Ej: Taller Los Pinos, Juan Méndez").classes("w-full")
                 campo("Horas de uso al momento", "Cuántas horas tenía la máquina cuando se hizo el mantenimiento.")
                 horas_uso = ui.number(value=0.0, min=0, step=0.5).classes("w-full")
-                campo("Costo en pesos ($)")
+                campo("Custo (R$)")
                 costo_mant = ui.number(value=0.0, min=0, step=10).classes("w-full")
             with ui.column().classes("flex-1 gap-3"):
-                campo("Descripción del trabajo", "Detallá qué se hizo, qué piezas se cambiaron, etc.")
+                campo("Descrição do trabalho", "Detalhe o que foi feito, quais peças foram trocadas, etc.")
                 descr_mant = ui.textarea(placeholder="Ej: Cambio de aceite y filtros. Se revisaron frenos.").classes("w-full h-32")
-                campo("Próxima manutenção", "Cuándo hay que volver a hacerle servicio.")
+                campo("Próxima manutenção", "Quando será necessário fazer a próxima revisão.")
                 prox_mant = ui.date().classes("w-full")
 
         def guardar_mantenimiento() -> None:
             if maquina_sel.value == ELEGIR:
-                notificar_aviso("Primero elegí la máquina a la que le hiciste el mantenimiento.")
+                notificar_aviso("Primeiro escolha a máquina que recebeu a manutenção.")
                 return
             try:
                 conn = conectar(); cur = conn.cursor()
@@ -1210,7 +1210,7 @@ def reproduccion_page() -> None:
     nav("/reproduccion")
     with ui.column().classes("px-4 pt-4 pb-1"):
         ui.label("🐣 Reprodução").classes("text-2xl font-bold")
-        ui.label("Controlá las fechas de fertilización y hacé seguimiento de los partos esperados.").classes("text-sm text-grey-6")
+        ui.label("Controle as datas de fertilização e acompanhe os partos esperados.").classes("text-sm text-grey-6")
 
     try:
         vacas_opts = [ELEGIR] + list(
@@ -1277,7 +1277,7 @@ def reproduccion_page() -> None:
         if df.empty:
             estado_vacio(
                 "No hay partos esperados próximamente.",
-                "Registrá una fertilización para que aparezca aquí la fecha estimada de parto."
+                "Registre uma fertilização para que apareça aqui a data estimada do parto."
             )
             return
 
@@ -1322,19 +1322,19 @@ def reproduccion_page() -> None:
         aviso_requeridos()
         with ui.row().classes("w-full gap-4 mt-3"):
             with ui.column().classes("flex-1 gap-3"):
-                campo("¿A qué vaca?", "", required=True)
+                campo("Qual vaca?", "", required=True)
                 vaca_f = ui.select(vacas_opts, value=vacas_opts[0]).classes("w-full")
                 campo("Tipo de fertilização", "¿Cómo se realizó?", required=True)
                 tipo_f = ui.select(TIPOS_FERTILIZACION, value=TIPOS_FERTILIZACION[0]).classes("w-full")
                 campo("Fecha de la fertilización", "El día en que se realizó.", required=True)
                 fecha_f = ui.date().classes("w-full")
             with ui.column().classes("flex-1"):
-                campo("Observações", "Anotá el toro utilizado, la dosis, el proveedor o cualquier dato útil.")
+                campo("Observações", "Anote o touro utilizado, a dose, o fornecedor ou qualquer dado útil.")
                 obs_f = ui.textarea(placeholder="Ej: Semen toro 'Relampago', dosis n.º 3, sin complicaciones.").classes("w-full h-44")
 
         def guardar_fertilizacion() -> None:
             if vaca_f.value == ELEGIR:
-                notificar_aviso("Primero elegí el animal que fue fertilizado.")
+                notificar_aviso("Primeiro escolha o animal que foi fertilizado.")
                 return
             if not fecha_f.value:
                 notificar_aviso("Indicá la fecha en que se realizó la fertilización.")
@@ -1369,11 +1369,11 @@ def reproduccion_page() -> None:
     # ── Formulario Parto ──────────────────────────────────────────────────────
     with ui.card().classes("mx-4 mb-4"):
         ui.label("🐄 Registrar un Parto").classes("text-lg font-bold mb-1")
-        ui.label("Anotá el resultado y los datos de la cría. El sexo y el peso son opcionales.").classes("help-text mb-3")
+        ui.label("Anote o resultado e os dados da cria. O sexo e o peso são opcionais.").classes("help-text mb-3")
         aviso_requeridos()
         with ui.row().classes("w-full gap-4 mt-3"):
             with ui.column().classes("flex-1 gap-3"):
-                campo("¿Qué vaca parió?", "", required=True)
+                campo("Qual vaca pariu?", "", required=True)
                 vaca_p = ui.select(vacas_opts, value=vacas_opts[0]).classes("w-full")
                 campo("Fecha del parto", "", required=True)
                 fecha_p = ui.date().classes("w-full")
@@ -1382,14 +1382,14 @@ def reproduccion_page() -> None:
             with ui.column().classes("flex-1 gap-3"):
                 campo("Sexo da cria", "Si nació una cría viva, ¿es macho o hembra?")
                 sexo_p = ui.select(["No aplica", "Fêmea", "Macho"], value="No aplica").classes("w-full")
-                campo("Peso da cria (kg)", "Cuánto pesó al nacer. Podés dejarlo en 0 si no lo pesaron.")
+                campo("Peso da cria (kg)", "Quanto pesou ao nascer. Pode deixar 0 se não foi pesado.")
                 peso_p = ui.number(value=0.0, min=0, step=0.5).classes("w-full")
                 campo("Observações", "Cualquier detalle relevante del parto.")
                 obs_p = ui.textarea(placeholder="Ej: Se requirió asistencia veterinaria. Cría vigorosa.").classes("w-full h-24")
 
         def guardar_parto() -> None:
             if vaca_p.value == ELEGIR:
-                notificar_aviso("Primero elegí la vaca que parió.")
+                notificar_aviso("Primeiro escolha a vaca que pariu.")
                 return
             if not fecha_p.value:
                 notificar_aviso("Indicá la fecha en que ocurrió el parto.")
@@ -1436,7 +1436,7 @@ def reproduccion_page() -> None:
             """)
             if df.empty:
                 estado_vacio("Todavía no hay eventos reproductivos registrados.",
-                             "Registrá la primera fertilización usando el formulario de arriba.")
+                             "Registre a primeira fertilização usando o formulário acima.")
             else:
                 df_to_table(df)
         except Exception as exc:
@@ -1454,7 +1454,7 @@ def finanzas_page() -> None:
     nav("/finanzas")
     with ui.column().classes("px-4 pt-4 pb-1"):
         ui.label("💰 Finanças").classes("text-2xl font-bold")
-        ui.label("Registrá tus ingresos y gastos para saber cómo está la plata de tu granja.").classes("text-sm text-grey-6")
+        ui.label("Registre suas receitas e despesas para saber como está o dinheiro da sua fazenda.").classes("text-sm text-grey-6")
 
     # ── KPIs del mes actual ───────────────────────────────────────────────────
     @ui.refreshable
@@ -1524,7 +1524,7 @@ def finanzas_page() -> None:
             with ui.card().classes("mx-4 mt-3 mb-1 p-3 bg-amber-50 border-l-4 border-amber-300"):
                 ui.label(
                     f"ℹ  Este mes también hay ${costos_auto:,.0f} en costos registrados en Salud y Maquinaria "
-                    "que no están incluidos arriba. Podés cargarlos manualmente si querés verlos en el balance."
+                    "que não estão incluídos acima. Pode cadastrá-los manualmente para vê-los no balanço."
                 ).classes("text-sm text-amber-800")
 
     kpis()
@@ -1588,7 +1588,7 @@ def finanzas_page() -> None:
 
             if not df_categ.empty:
                 with ui.card().classes("flex-1"):
-                    ui.label("🍩 ¿En qué se fue el dinero?").classes("font-bold mb-1")
+                    ui.label("🍩 Em que foi o dinheiro?").classes("font-bold mb-1")
                     ui.label("Distribución de gastos por categoría en los últimos 6 meses.").classes("help-text mb-2")
                     pie_data = [{"value": float(r["total"]), "name": r["categoria"]}
                                 for _, r in df_categ.iterrows()]
@@ -1649,7 +1649,7 @@ def finanzas_page() -> None:
     # ── Formulario de registro ─────────────────────────────────────────────────
     with ui.card().classes("mx-4 mb-4"):
         ui.label("➕ Registrar un movimiento").classes("text-lg font-bold mb-1")
-        ui.label("Ingresá un ingreso (plata que entrá) o un gasto (plata que sale).").classes("help-text mb-3")
+        ui.label("Informe uma receita (dinheiro que entra) ou uma despesa (dinheiro que sai).").classes("help-text mb-3")
         aviso_requeridos()
 
         with ui.row().classes("w-full gap-4 mt-3 flex-wrap"):
@@ -1658,7 +1658,7 @@ def finanzas_page() -> None:
                 tipo_mov = ui.select(["Receita", "Despesa"], value="Receita").classes("w-full")
 
                 cat_label_el = ui.label("Categoría *").classes("text-sm font-semibold text-grey-8 mt-1")
-                cat_help_el  = ui.label("¿De qué tipo es este movimiento?").classes("help-text")
+                cat_help_el  = ui.label("Que tipo é este movimento?").classes("help-text")
                 categoria    = ui.select(CATEGORIAS_INGRESO, value=CATEGORIAS_INGRESO[0]).classes("w-full")
 
                 def actualizar_categorias() -> None:
@@ -1672,14 +1672,14 @@ def finanzas_page() -> None:
 
                 tipo_mov.on("update:model-value", lambda _: actualizar_categorias())
 
-                campo("Monto en pesos ($)", "¿Cuánto dinero fue? Solo el número, sin el signo $.", required=True)
+                campo("Valor (R$)", "Qual o valor? Somente o número, sem o sinal R$.", required=True)
                 monto = ui.number(value=0.0, min=0, step=100, prefix="$").classes("w-full")
 
                 campo("Data", "Quando ocorreu?", required=True)
                 fecha_mov = ui.date(value=date.today().isoformat()).classes("w-full")
 
             with ui.column().classes("flex-1"):
-                campo("Descrição", "Anotá los detalles para recordar de qué se trató.")
+                campo("Descrição", "Anote os detalhes para lembrar do que se tratou.")
                 descripcion = ui.textarea(
                     placeholder="Ej: Venta de 4.200 litros de leche a $0.42/lt · Taller López — cambio de aceite tractor"
                 ).classes("w-full h-44")
@@ -1717,7 +1717,7 @@ def finanzas_page() -> None:
         ui.label("🔗 Costos registrados en otras secciones").classes("text-lg font-bold mb-1")
         ui.label(
             "Estos costos se generaron al registrar atenciones veterinarias y mantenimientos. "
-            "Están aquí como referencia — si querés incluirlos en el balance, cargalos manualmente arriba."
+            "Estão aqui como referência — se quiser incluí-los no balanço, cadastre-os manualmente acima."
         ).classes("help-text mb-3")
         try:
             df_auto = read_sql("""
@@ -1776,7 +1776,7 @@ def empleados_page() -> None:
     nav("/empleados")
     with ui.column().classes("px-4 pt-4 pb-1"):
         ui.label("👷 Funcionários").classes("text-2xl font-bold")
-        ui.label("Registrá tu personal, sus cargos y llevá el historial de pagos.").classes("text-sm text-grey-6")
+        ui.label("Cadastre seu pessoal, seus cargos e mantenha o histórico de pagamentos.").classes("text-sm text-grey-6")
 
     # ── KPIs ─────────────────────────────────────────────────────────────────
     @ui.refreshable
@@ -1854,7 +1854,7 @@ def empleados_page() -> None:
     # ── Formulario nuevo empleado ─────────────────────────────────────────────
     with ui.card().classes("mx-4 mb-4"):
         ui.label("➕ Registrar un Empleado").classes("text-lg font-bold mb-1")
-        ui.label("Completá los datos del nuevo integrante del equipo.").classes("help-text mb-3")
+        ui.label("Preencha os dados do novo integrante da equipe.").classes("help-text mb-3")
         aviso_requeridos()
 
         with ui.row().classes("w-full gap-4 mt-3"):
@@ -1862,7 +1862,7 @@ def empleados_page() -> None:
                 campo("Nome completo", "", required=True)
                 nombre_emp = ui.input(placeholder="Ej: Juan Pérez").classes("w-full")
 
-                campo("Cargo", "¿Qué función cumple en la granja?", required=True)
+                campo("Cargo", "Qual função exerce na fazenda?", required=True)
                 cargo_emp = ui.select(CARGOS_EMPLEADO, value=CARGOS_EMPLEADO[0]).classes("w-full")
 
                 campo("Sueldo base mensual ($)", "Monto acordado por mes.")
@@ -2354,7 +2354,7 @@ def reportes_page() -> None:
                             }).classes("w-full h-56")
 
                     with ui.card().classes("flex-1"):
-                        ui.label("¿En qué se gastó el dinero?").classes("font-bold mb-1")
+                        ui.label("Em que foi gasto o dinheiro?").classes("font-bold mb-1")
                         ui.label("Distribución de egresos por categoría.").classes("help-text mb-2")
                         if not df_categ_f.empty:
                             ui.echart({
@@ -2520,7 +2520,7 @@ def reportes_page() -> None:
 
                     with ui.card().classes("flex-1"):
                         ui.label("Mantenimientos por tipo").classes("font-bold mb-1")
-                        ui.label("Qué tipo de mantenimiento se realiza más.").classes("help-text mb-2")
+                        ui.label("Qual tipo de manutenção é realizado com mais frequência.").classes("help-text mb-2")
                         if not df_tipo_mant.empty:
                             ui.echart({
                                 "tooltip": {"trigger": "item", "formatter": "{b}: {c} ({d}%)"},
