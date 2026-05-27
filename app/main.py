@@ -34,6 +34,13 @@ GESTACION_DIAS      = 283
 STOCK_ALERTA        = 100
 STOCK_MEDIO         = 300
 
+CARGOS_EMPLEADO = [
+    "Capataz", "Ordeñador/a", "Tractorista", "Encargado/a de alimentación",
+    "Encargado/a de sanidad", "Veterinario/a de campo", "Administrador/a",
+    "Peón rural", "Otro",
+]
+TIPOS_PAGO_EMP = ["Sueldo", "Adelanto", "Bono", "Liquidación"]
+
 CATEGORIAS_INGRESO = [
     "Venta de leche",
     "Venta de animales",
@@ -154,6 +161,7 @@ def nav(current: str = "/") -> None:
         ("🚜 Maquinaria",  "/maquinaria"),
         ("🐣 Reproducción", "/reproduccion"),
         ("💰 Finanzas",     "/finanzas"),
+        ("👷 Empleados",    "/empleados"),
     ]
     with ui.header().classes("bg-blue-800 text-white flex items-center gap-2 px-6 py-3"):
         ui.label("🐄 Dairy Farm Pro").classes("text-xl font-bold mr-4")
@@ -1651,6 +1659,236 @@ def finanzas_page() -> None:
     with ui.card().classes("mx-4 mb-4"):
         ui.label("📋 Historial de Movimientos").classes("text-lg font-bold mb-2")
         tabla_hist()
+
+
+# ── EMPLEADOS ────────────────────────────────────────────────────────────────
+
+@ui.page("/empleados")
+def empleados_page() -> None:
+    nav("/empleados")
+    with ui.column().classes("px-4 pt-4 pb-1"):
+        ui.label("👷 Empleados").classes("text-2xl font-bold")
+        ui.label("Registrá tu personal, sus cargos y llevá el historial de pagos.").classes("text-sm text-grey-6")
+
+    # ── KPIs ─────────────────────────────────────────────────────────────────
+    @ui.refreshable
+    def kpis_emp() -> None:
+        try:
+            activos = int(read_sql(
+                "SELECT COUNT(*) FROM tabla_empleados WHERE estado='activo'"
+            ).iloc[0, 0])
+            nomina = float(read_sql(
+                "SELECT COALESCE(SUM(sueldo_base),0) FROM tabla_empleados WHERE estado='activo'"
+            ).iloc[0, 0])
+            pagos_mes = float(read_sql("""
+                SELECT COALESCE(SUM(monto),0) FROM tabla_pagos
+                WHERE DATE_TRUNC('month',fecha)=DATE_TRUNC('month',CURRENT_DATE)
+            """).iloc[0, 0])
+        except Exception as exc:
+            ui.label("Error al cargar métricas.").classes("text-red")
+            return
+        with ui.row().classes("w-full gap-4 px-4 mt-4 mb-2"):
+            for titulo, valor, sub, color in [
+                ("👷 Empleados activos", str(activos),            "en el establecimiento", "blue-800"),
+                ("💵 Nómina mensual",    f"${nomina:,.0f}",       "sueldos base totales",  "green-700"),
+                ("💸 Pagado este mes",   f"${pagos_mes:,.0f}",    "entre sueldos y bonos", "purple-700"),
+            ]:
+                with ui.card().classes("flex-1 p-6 text-center"):
+                    ui.label(titulo).classes("text-xs text-grey-5 uppercase tracking-widest")
+                    ui.label(valor).classes(f"text-4xl font-bold text-{color} mt-1")
+                    ui.label(sub).classes("text-xs text-grey-5 mt-1")
+
+    kpis_emp()
+
+    # ── Tarjetas de empleados ─────────────────────────────────────────────────
+    @ui.refreshable
+    def tarjetas_empleados() -> None:
+        try:
+            df = read_sql("""
+                SELECT empleado_id, nombre, cargo, sueldo_base,
+                       COALESCE(telefono,'—') AS telefono,
+                       TO_CHAR(fecha_ingreso,'DD/MM/YYYY') AS fecha_ingreso,
+                       estado
+                FROM tabla_empleados
+                ORDER BY estado DESC, cargo, nombre
+            """)
+        except Exception as exc:
+            ui.label("Error al cargar empleados.").classes("text-red")
+            return
+
+        if df.empty:
+            estado_vacio("Todavía no hay empleados registrados.",
+                         "Usá el formulario de abajo para agregar el primero.")
+            return
+
+        with ui.grid(columns=3).classes("w-full gap-3 px-4 mb-2"):
+            for _, r in df.iterrows():
+                activo = r["estado"] == "activo"
+                bg     = "bg-white" if activo else "bg-grey-2 opacity-70"
+                with ui.card().classes(f"p-4 {bg}"):
+                    with ui.row().classes("items-center justify-between w-full mb-2"):
+                        ui.label("👷").style("font-size:1.6rem")
+                        ui.badge("Activo" if activo else "Inactivo").props(
+                            f"color={'green' if activo else 'grey'} rounded"
+                        )
+                    ui.label(r["nombre"]).classes("font-bold text-base text-blue-900")
+                    ui.label(r["cargo"]).classes("text-sm text-grey-6 mb-2")
+                    ui.separator()
+                    with ui.column().classes("gap-1 mt-2"):
+                        ui.label(f"💵  Sueldo base: ${float(r['sueldo_base']):,.0f}").classes("text-sm")
+                        ui.label(f"📱  {r['telefono']}").classes("text-sm text-grey-7")
+                        ui.label(f"📅  Ingresó: {r['fecha_ingreso']}").classes("text-xs text-grey-5")
+
+    with ui.card().classes("mx-4 mb-4"):
+        ui.label("Personal del Establecimiento").classes("text-lg font-bold mb-3")
+        tarjetas_empleados()
+
+    # ── Formulario nuevo empleado ─────────────────────────────────────────────
+    with ui.card().classes("mx-4 mb-4"):
+        ui.label("➕ Registrar un Empleado").classes("text-lg font-bold mb-1")
+        ui.label("Completá los datos del nuevo integrante del equipo.").classes("help-text mb-3")
+        aviso_requeridos()
+
+        with ui.row().classes("w-full gap-4 mt-3"):
+            with ui.column().classes("flex-1 gap-3"):
+                campo("Nombre completo", "", required=True)
+                nombre_emp = ui.input(placeholder="Ej: Juan Pérez").classes("w-full")
+
+                campo("Cargo", "¿Qué función cumple en la granja?", required=True)
+                cargo_emp = ui.select(CARGOS_EMPLEADO, value=CARGOS_EMPLEADO[0]).classes("w-full")
+
+                campo("Sueldo base mensual ($)", "Monto acordado por mes.")
+                sueldo_emp = ui.number(value=0.0, min=0, step=1000, prefix="$").classes("w-full")
+
+            with ui.column().classes("flex-1 gap-3"):
+                campo("Teléfono de contacto", "Celular o teléfono fijo.")
+                tel_emp = ui.input(placeholder="Ej: +54 9 11 1234-5678").classes("w-full")
+
+                campo("Fecha de ingreso", "¿Desde cuándo trabaja aquí?")
+                fecha_ing_emp = ui.date(value=date.today().isoformat()).classes("w-full")
+
+                campo("Estado", "")
+                estado_emp = ui.select(["activo", "inactivo"], value="activo").classes("w-full")
+
+        def guardar_empleado() -> None:
+            if not nombre_emp.value.strip():
+                notificar_aviso("El nombre del empleado es obligatorio.")
+                return
+            try:
+                conn = conectar(); cur = conn.cursor()
+                cur.execute("""
+                    INSERT INTO tabla_empleados
+                        (nombre, cargo, sueldo_base, telefono, fecha_ingreso, estado)
+                    VALUES (%s,%s,%s,%s,%s,%s)
+                """, (nombre_emp.value.strip(), cargo_emp.value,
+                      sueldo_emp.value or 0, tel_emp.value or None,
+                      fecha_ing_emp.value or date.today(), estado_emp.value))
+                conn.commit(); cur.close(); conn.close()
+                notificar_ok(f"✓ {nombre_emp.value} registrado como {cargo_emp.value}.")
+                nombre_emp.value = ""; tel_emp.value = ""; sueldo_emp.value = 0.0
+                kpis_emp.refresh()
+                tarjetas_empleados.refresh()
+                selector_empleado.refresh()
+            except Exception as exc:
+                notificar_error(exc)
+
+        ui.button("💾  Guardar Empleado", on_click=guardar_empleado).classes(
+            "mt-4 bg-blue-700 text-white font-bold px-8 py-3 text-base"
+        )
+
+    # ── Formulario pago ───────────────────────────────────────────────────────
+    with ui.card().classes("mx-4 mb-4"):
+        ui.label("💸 Registrar un Pago").classes("text-lg font-bold mb-1")
+        ui.label("Registrá sueldos, adelantos, bonos o liquidaciones.").classes("help-text mb-3")
+        aviso_requeridos()
+
+        @ui.refreshable
+        def selector_empleado() -> None:
+            try:
+                df_e = read_sql(
+                    "SELECT nombre, sueldo_base FROM tabla_empleados WHERE estado='activo' ORDER BY nombre"
+                )
+                opts = [ELEGIR] + list(df_e["nombre"])
+            except Exception:
+                opts = [ELEGIR]
+            emp_sel.options = opts
+            if emp_sel.value not in opts:
+                emp_sel.value = opts[0]
+
+        with ui.row().classes("w-full gap-4 mt-3"):
+            with ui.column().classes("flex-1 gap-3"):
+                campo("¿A qué empleado?", "", required=True)
+                emp_sel = ui.select([ELEGIR], value=ELEGIR).classes("w-full")
+                selector_empleado()
+
+                campo("Tipo de pago", "", required=True)
+                tipo_pago = ui.select(TIPOS_PAGO_EMP, value=TIPOS_PAGO_EMP[0]).classes("w-full")
+
+                campo("Monto ($)", "", required=True)
+                monto_pago = ui.number(value=0.0, min=0, step=500, prefix="$").classes("w-full")
+
+                campo("Fecha del pago", "", required=True)
+                fecha_pago = ui.date(value=date.today().isoformat()).classes("w-full")
+
+            with ui.column().classes("flex-1"):
+                campo("Descripción", "Ej: Sueldo mayo 2026, Adelanto quincena, Premio productividad…")
+                desc_pago = ui.textarea(placeholder="Detalle del pago…").classes("w-full h-44")
+
+        def guardar_pago() -> None:
+            if emp_sel.value == ELEGIR:
+                notificar_aviso("Primero elegí el empleado.")
+                return
+            if (monto_pago.value or 0) <= 0:
+                notificar_aviso("El monto debe ser mayor a 0.")
+                return
+            try:
+                conn = conectar(); cur = conn.cursor()
+                cur.execute("SELECT empleado_id FROM tabla_empleados WHERE nombre=%s", (emp_sel.value,))
+                row = cur.fetchone(); emp_id = row[0] if row else None
+                cur.execute(
+                    "INSERT INTO tabla_pagos (empleado_id, fecha, tipo, monto, descripcion) VALUES (%s,%s,%s,%s,%s)",
+                    (emp_id, fecha_pago.value, tipo_pago.value,
+                     monto_pago.value, desc_pago.value or None),
+                )
+                conn.commit(); cur.close(); conn.close()
+                notificar_ok(f"✓ {tipo_pago.value} de ${monto_pago.value:,.0f} registrado para {emp_sel.value}.")
+                monto_pago.value = 0.0; desc_pago.value = ""
+                kpis_emp.refresh()
+                tabla_pagos.refresh()
+            except Exception as exc:
+                notificar_error(exc)
+
+        ui.button("💾  Registrar Pago", on_click=guardar_pago).classes(
+            "mt-4 bg-green-700 text-white font-bold px-8 py-3 text-base"
+        )
+
+    # ── Historial de pagos ────────────────────────────────────────────────────
+    @ui.refreshable
+    def tabla_pagos() -> None:
+        try:
+            df = read_sql("""
+                SELECT e.nombre                          AS "Empleado",
+                       e.cargo                           AS "Cargo",
+                       TO_CHAR(p.fecha,'DD/MM/YYYY')    AS "Fecha",
+                       p.tipo                            AS "Tipo",
+                       p.monto                          AS "Monto $",
+                       COALESCE(p.descripcion,'—')      AS "Descripción"
+                FROM tabla_pagos p
+                JOIN tabla_empleados e ON p.empleado_id=e.empleado_id
+                ORDER BY p.fecha DESC, p.pago_id DESC
+                LIMIT 100
+            """)
+            if df.empty:
+                estado_vacio("Todavía no hay pagos registrados.",
+                             "Usá el formulario de arriba para registrar el primero.")
+            else:
+                df_to_table(df)
+        except Exception as exc:
+            ui.label("Error al cargar pagos.").classes("text-red")
+
+    with ui.card().classes("mx-4 mb-4"):
+        ui.label("Historial de Pagos").classes("text-lg font-bold mb-2")
+        tabla_pagos()
 
 
 ui.run(title="Dairy Farm Pro", port=8080, reload=False)
