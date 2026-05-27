@@ -16,48 +16,48 @@ DB_CONFIG = {
 }
 
 TIPOS_EVENTO = [
-    "Vacunación", "Control rutinario", "Tratamiento",
-    "Enfermedad", "Parto asistido", "Cirugía",
+    "Vacinação", "Controle rotineiro", "Tratamento",
+    "Doença", "Parto assistido", "Cirurgia",
 ]
 TIPOS_MAQUINARIA = [
-    "Tractor", "Ordeñadora", "Compresor", "Generador",
-    "Mixer", "Cargadora", "Bomba", "Cisterna", "Otro",
+    "Trator", "Ordenhadeira", "Compressor", "Gerador",
+    "Mixer", "Carregadeira", "Bomba", "Cisterna", "Outro",
 ]
 TIPOS_MANTENCION = [
-    "Preventivo", "Correctivo", "Cambio de aceite",
-    "Revisión general", "Reparación", "Calibración",
+    "Preventivo", "Corretivo", "Troca de óleo",
+    "Revisão geral", "Reparo", "Calibração",
 ]
-ESTADOS_MAQUINA     = ["Operativa", "En mantenimiento", "Fuera de servicio"]
-TIPOS_FERTILIZACION = ["Inseminación Artificial", "Monta Natural"]
-RESULTADOS_PARTO    = ["Exitoso", "Gemelar", "Aborto", "Cría muerta"]
+ESTADOS_MAQUINA     = ["Operacional", "Em manutenção", "Fora de serviço"]
+TIPOS_FERTILIZACION = ["Inseminação Artificial", "Monta Natural"]
+RESULTADOS_PARTO    = ["Bem-sucedido", "Gemelar", "Aborto", "Cria morta"]
 GESTACION_DIAS      = 283
 STOCK_ALERTA        = 100
 STOCK_MEDIO         = 300
 
 CARGOS_EMPLEADO = [
-    "Capataz", "Ordeñador/a", "Tractorista", "Encargado/a de alimentación",
-    "Encargado/a de sanidad", "Veterinario/a de campo", "Administrador/a",
-    "Peón rural", "Otro",
+    "Capataz", "Ordenhador/a", "Tratorista", "Resp. por alimentação",
+    "Resp. por sanidade", "Veterinário/a de campo", "Administrador/a",
+    "Trabalhador rural", "Outro",
 ]
-TIPOS_PAGO_EMP = ["Sueldo", "Adelanto", "Bono", "Liquidación"]
+TIPOS_PAGO_EMP = ["Salário", "Adiantamento", "Bônus", "Rescisão"]
 
 CATEGORIAS_INGRESO = [
-    "Venta de leche",
-    "Venta de animales",
-    "Subsidio o ayuda estatal",
-    "Otro ingreso",
+    "Venda de leite",
+    "Venda de animais",
+    "Subsídio ou apoio estatal",
+    "Outra receita",
 ]
 CATEGORIAS_EGRESO = [
-    "Alimentación e insumos",
-    "Veterinario y salud animal",
-    "Mantenimiento de maquinaria",
-    "Mano de obra",
-    "Combustible",
-    "Servicios (luz, agua, gas)",
-    "Otros gastos",
+    "Alimentação e insumos",
+    "Veterinário e saúde animal",
+    "Manutenção de maquinário",
+    "Mão de obra",
+    "Combustível",
+    "Serviços (luz, água, gás)",
+    "Outros gastos",
 ]
 
-ELEGIR = "— Elegí una opción —"
+ELEGIR = "— Escolha uma opção —"
 
 
 # ── helpers DB ────────────────────────────────────────────────────────────────
@@ -110,7 +110,7 @@ def campo(label: str, ayuda: str = "", required: bool = False):
 
 
 def aviso_requeridos() -> None:
-    ui.label("Los campos marcados con * son obligatorios.").classes(
+    ui.label("Os campos marcados com * são obrigatórios.").classes(
         "text-xs text-grey-5 italic mt-1"
     )
 
@@ -125,7 +125,7 @@ def estado_vacio(mensaje: str, accion: str = "") -> None:
 
 def df_to_table(df: pd.DataFrame, pagination: int = 15) -> None:
     if df.empty:
-        estado_vacio("Todavía no hay registros aquí.")
+        estado_vacio("Ainda não há registros aqui.")
         return
     cols = [{"name": c, "label": c, "field": c, "sortable": True} for c in df.columns]
     rows = json.loads(df.to_json(orient="records", date_format="iso", default_handler=str))
@@ -138,7 +138,7 @@ def notificar_ok(msg: str) -> None:
 
 def notificar_error(exc: Exception) -> None:
     ui.notify(
-        f"No se pudo guardar. Revisá los datos e intentá de nuevo.\n(Detalle: {exc})",
+        f"Não foi possível salvar. Verifique os dados e tente novamente.\n(Detalhe: {exc})",
         type="negative", timeout=8000, position="top",
     )
 
@@ -152,17 +152,17 @@ def notificar_aviso(msg: str) -> None:
 def nav(current: str = "/") -> None:
     _css()
     links = [
-        ("🏠 Inicio",      "/"),
+        ("🏠 Início",      "/"),
         ("🐄 Vacas",       "/vacas"),
-        ("💊 Salud",       "/salud"),
-        ("🥛 Leche",       "/leche"),
+        ("💊 Saúde",       "/salud"),
+        ("🥛 Leite",       "/leche"),
         ("🥗 Dietas",      "/dietas"),
-        ("📦 Bodega",      "/bodega"),
-        ("🚜 Maquinaria",  "/maquinaria"),
-        ("🐣 Reproducción", "/reproduccion"),
-        ("💰 Finanzas",     "/finanzas"),
-        ("👷 Empleados",    "/empleados"),
-        ("📊 Reportes",     "/reportes"),
+        ("📦 Estoque",      "/bodega"),
+        ("🚜 Maquinário",  "/maquinaria"),
+        ("🐣 Reprodução", "/reproduccion"),
+        ("💰 Finanças",     "/finanzas"),
+        ("👷 Funcionários",    "/empleados"),
+        ("📊 Relatórios",     "/reportes"),
     ]
     with ui.header().classes("bg-blue-800 text-white flex items-center gap-2 px-6 py-3"):
         ui.label("🐄 Dairy Farm Pro").classes("text-xl font-bold mr-4")
@@ -179,11 +179,11 @@ def nav(current: str = "/") -> None:
 def dashboard() -> None:
     nav("/")
     with ui.column().classes("px-4 pt-4 pb-1"):
-        ui.label("Resumen General").classes("text-2xl font-bold")
-        ui.label("Así está tu granja hoy.").classes("text-sm text-grey-6")
+        ui.label("Resumo Geral").classes("text-2xl font-bold")
+        ui.label("Veja como está sua fazenda hoje.").classes("text-sm text-grey-6")
 
     try:
-        total_vacas  = int(read_sql("SELECT COUNT(*) FROM tabla_vacas WHERE estado='activa'").iloc[0, 0])
+        total_vacas  = int(read_sql("SELECT COUNT(*) FROM tabla_vacas WHERE estado='ativa'").iloc[0, 0])
         total_dietas = int(read_sql("SELECT COUNT(*) FROM tabla_dieta").iloc[0, 0])
         litros_hoy   = float(read_sql(
             "SELECT COALESCE(SUM(litros),0) FROM tabla_leche WHERE DATE(fecha_hora)=CURRENT_DATE"
@@ -193,11 +193,11 @@ def dashboard() -> None:
         ).iloc[0, 0])
         vacas_tratamiento = int(read_sql("""
             SELECT COUNT(DISTINCT vaca_id) FROM tabla_salud
-            WHERE tipo_evento IN ('Tratamiento','Enfermedad')
+            WHERE tipo_evento IN ('Tratamento','Doença')
               AND fecha >= CURRENT_DATE - 7
         """).iloc[0, 0])
         balance_mes = float(read_sql("""
-            SELECT COALESCE(SUM(CASE WHEN tipo='Ingreso' THEN monto ELSE -monto END),0)
+            SELECT COALESCE(SUM(CASE WHEN tipo='Receita' THEN monto ELSE -monto END),0)
             FROM tabla_finanzas
             WHERE DATE_TRUNC('month',fecha)=DATE_TRUNC('month',CURRENT_DATE)
         """).iloc[0, 0])
@@ -215,7 +215,7 @@ def dashboard() -> None:
         """)
         df_categorias = read_sql("""
             SELECT COALESCE(grupo,'(sin grupo)') AS grupo, COUNT(*)::int AS total
-            FROM tabla_vacas WHERE estado='activa'
+            FROM tabla_vacas WHERE estado='ativa'
             GROUP BY COALESCE(grupo,'(sin grupo)') ORDER BY total DESC
         """)
         stock_critico = read_sql(
@@ -227,7 +227,7 @@ def dashboard() -> None:
                    (r.fecha_parto_esperado - CURRENT_DATE)::int AS dias
             FROM tabla_reproduccion r
             JOIN tabla_vacas v ON r.vaca_id = v.vaca_id
-            WHERE r.tipo_evento = 'Fertilización'
+            WHERE r.tipo_evento = 'Fertilização'
               AND r.fecha_parto_esperado BETWEEN CURRENT_DATE AND CURRENT_DATE + 30
             ORDER BY r.fecha_parto_esperado
         """)
@@ -265,35 +265,35 @@ def dashboard() -> None:
     )
     if _hay_alertas:
         with ui.card().classes("mx-4 mt-4 mb-2 bg-amber-50 border-l-4 border-amber-400 p-4"):
-            ui.label("⚠  Alertas que necesitan tu atención").classes("font-bold text-amber-800 mb-2")
+            ui.label("⚠  Alertas que precisam de atenção").classes("font-bold text-amber-800 mb-2")
             if vacas_tratamiento > 0:
                 ui.label(
-                    f"💊  {vacas_tratamiento} animal{'es' if vacas_tratamiento != 1 else ''} en tratamiento esta semana — revisá Salud."
+                    f"💊  {vacas_tratamiento} animal{'is' if vacas_tratamiento != 1 else ''} em tratamento esta semana — veja Saúde."
                 ).classes("text-sm text-amber-900 mb-1")
             for _, row in stock_critico.iterrows():
                 ui.label(
-                    f"📦  Stock crítico: {row['nombre_insumo']} — quedan {row['stock_actual_kg']:.0f} kg"
+                    f"📦  Estoque crítico: {row['nombre_insumo']} — restam {row['stock_actual_kg']:.0f} kg"
                 ).classes("text-sm text-amber-900 mb-1")
             for _, row in partos_inminentes.iterrows():
                 dias = int(row["dias"])
                 if dias <= 7:
-                    txt = "¡Hoy!" if dias == 0 else f"¡En {dias} día{'s' if dias != 1 else ''}!"
+                    txt = "Hoje!" if dias == 0 else f"Em {dias} dia{'s' if dias != 1 else ''}!"
                     style = "text-sm text-red-700 font-semibold mb-1"
                 else:
-                    txt = f"En {dias} días"
+                    txt = f"Em {dias} dias"
                     style = "text-sm text-amber-900 mb-1"
                 ui.label(
                     f"🐣  Parto de {row['nombre']} — {txt} ({row['fecha_parto_esperado']})"
                 ).classes(style)
             for _, row in maquinaria_vencida.iterrows():
                 ui.label(
-                    f"🚜  Mantenimiento vencido: {row['nombre']} (vencía {row['proximo_mantenimiento']})"
+                    f"🚜  Manutenção vencida: {row['nombre']} (venceu em {row['proximo_mantenimiento']})"
                 ).classes("text-sm text-amber-900 mb-1")
 
     # ── Métricas ──
     _dif_litros = litros_hoy - litros_ayer
-    _dif_txt    = (f"↑ {_dif_litros:+.0f} L vs ayer" if _dif_litros >= 0
-                   else f"↓ {_dif_litros:.0f} L vs ayer")
+    _dif_txt    = (f"↑ {_dif_litros:+.0f} L vs ontem" if _dif_litros >= 0
+                   else f"↓ {_dif_litros:.0f} L vs ontem")
     _dif_color  = "text-green-600" if _dif_litros >= 0 else "text-red-500"
     _bal_color  = "text-green-700 font-bold" if balance_mes >= 0 else "text-red-600 font-bold"
     _trat_color = "text-orange-600 font-bold" if vacas_tratamiento > 0 else "text-blue-800"
@@ -303,16 +303,16 @@ def dashboard() -> None:
         with ui.card().classes("flex-1 min-w-36 p-5 text-center cursor-pointer hover:shadow-md").on(
             "click", lambda: ui.navigate.to("/vacas")
         ):
-            ui.label("🐄 Vacas Activas").classes("text-xs text-grey-5 uppercase tracking-widest")
+            ui.label("🐄 Vacas Ativas").classes("text-xs text-grey-5 uppercase tracking-widest")
             ui.label(str(total_vacas)).classes("text-5xl font-bold text-blue-800 mt-1")
-            ui.label("en producción").classes("text-xs text-grey-5 mt-1")
+            ui.label("em produção").classes("text-xs text-grey-5 mt-1")
             ui.label("Ver →").classes("text-xs text-blue-500 mt-2")
 
         # Litros hoy
         with ui.card().classes("flex-1 min-w-36 p-5 text-center cursor-pointer hover:shadow-md").on(
             "click", lambda: ui.navigate.to("/leche")
         ):
-            ui.label("🥛 Litros Hoy").classes("text-xs text-grey-5 uppercase tracking-widest")
+            ui.label("🥛 Litros Hoje").classes("text-xs text-grey-5 uppercase tracking-widest")
             ui.label(f"{litros_hoy:.0f}").classes("text-5xl font-bold text-blue-800 mt-1")
             ui.label(_dif_txt).classes(f"text-xs {_dif_color} mt-1 font-medium")
             ui.label("Ver →").classes("text-xs text-blue-500 mt-2")
@@ -321,43 +321,43 @@ def dashboard() -> None:
         with ui.card().classes("flex-1 min-w-36 p-5 text-center cursor-pointer hover:shadow-md").on(
             "click", lambda: ui.navigate.to("/reportes")
         ):
-            ui.label("📈 L/Vaca/Día").classes("text-xs text-grey-5 uppercase tracking-widest")
+            ui.label("📈 L/Vaca/Dia").classes("text-xs text-grey-5 uppercase tracking-widest")
             ui.label(f"{litros_por_vaca:.1f}").classes("text-5xl font-bold text-blue-800 mt-1")
-            ui.label("eficiencia hoy").classes("text-xs text-grey-5 mt-1")
-            ui.label("Ver reportes →").classes("text-xs text-blue-500 mt-2")
+            ui.label("eficiência hoje").classes("text-xs text-grey-5 mt-1")
+            ui.label("Ver relatórios →").classes("text-xs text-blue-500 mt-2")
 
         # Vacas en tratamiento
         with ui.card().classes("flex-1 min-w-36 p-5 text-center cursor-pointer hover:shadow-md").on(
             "click", lambda: ui.navigate.to("/salud")
         ):
-            ui.label("💊 En Tratamiento").classes("text-xs text-grey-5 uppercase tracking-widest")
+            ui.label("💊 Em Tratamento").classes("text-xs text-grey-5 uppercase tracking-widest")
             ui.label(str(vacas_tratamiento)).classes(f"text-5xl {_trat_color} mt-1")
-            ui.label("últimos 7 días").classes("text-xs text-grey-5 mt-1")
-            ui.label("Ver salud →").classes("text-xs text-blue-500 mt-2")
+            ui.label("últimos 7 dias").classes("text-xs text-grey-5 mt-1")
+            ui.label("Ver saúde →").classes("text-xs text-blue-500 mt-2")
 
         # Balance del mes
         with ui.card().classes("flex-1 min-w-36 p-5 text-center cursor-pointer hover:shadow-md").on(
             "click", lambda: ui.navigate.to("/finanzas")
         ):
-            ui.label("💰 Balance Mes").classes("text-xs text-grey-5 uppercase tracking-widest")
+            ui.label("💰 Balanço do Mês").classes("text-xs text-grey-5 uppercase tracking-widest")
             ui.label(f"${balance_mes:,.0f}").classes(f"text-3xl {_bal_color} mt-2")
-            ui.label("ingresos – egresos").classes("text-xs text-grey-5 mt-1")
-            ui.label("Ver finanzas →").classes("text-xs text-blue-500 mt-2")
+            ui.label("receitas – despesas").classes("text-xs text-grey-5 mt-1")
+            ui.label("Ver finanças →").classes("text-xs text-blue-500 mt-2")
 
     if error_msg:
-        ui.label(f"No se pudo conectar a la base de datos. Avisá al administrador.").classes("text-red m-4 font-semibold")
+        ui.label(f"Não foi possível conectar ao banco de dados. Avise o administrador.").classes("text-red m-4 font-semibold")
         return
 
     # ── Accesos rápidos ──
     with ui.card().classes("mx-4 mt-4 mb-2 p-4"):
-        ui.label("Acciones frecuentes").classes("font-bold mb-3 text-grey-7")
+        ui.label("Ações frequentes").classes("font-bold mb-3 text-grey-7")
         with ui.row().classes("gap-3 flex-wrap"):
             for icono, texto, href in [
-                ("🥛", "Registrar ordeñe",       "/leche"),
-                ("💊", "Anotar evento de salud", "/salud"),
-                ("📦", "Reponer stock",           "/bodega"),
-                ("🚜", "Registrar mantenimiento","/maquinaria"),
-                ("🐣", "Registrar fertilización","/reproduccion"),
+                ("🥛", "Registrar ordenha",       "/leche"),
+                ("💊", "Registrar evento de saúde", "/salud"),
+                ("📦", "Repor estoque",           "/bodega"),
+                ("🚜", "Registrar manutenção","/maquinaria"),
+                ("🐣", "Registrar fertilização","/reproduccion"),
             ]:
                 ui.button(f"{icono}  {texto}", on_click=lambda h=href: ui.navigate.to(h)).classes(
                     "bg-blue-50 text-blue-800 font-semibold border border-blue-200 px-4 py-2 text-sm"
@@ -366,8 +366,8 @@ def dashboard() -> None:
     # ── Gráficos ──
     with ui.row().classes("w-full gap-4 px-4 pb-4 mt-4"):
         with ui.card().classes("flex-1"):
-            ui.label("Stock de insumos (kg)").classes("font-bold mb-1")
-            ui.label("Cuánto hay en bodega de cada alimento o producto.").classes("help-text mb-2")
+            ui.label("Estoque de insumos (kg)").classes("font-bold mb-1")
+            ui.label("Quanto há em estoque de cada alimento ou produto.").classes("help-text mb-2")
             if not df_stock.empty:
                 ui.echart({
                     "tooltip": {"trigger": "axis"},
@@ -381,11 +381,11 @@ def dashboard() -> None:
                                 "itemStyle": {"color": "#1d4ed8"}}],
                 }).classes("w-full h-64")
             else:
-                estado_vacio("Sin datos de stock aún.", "Andá a Bodega para cargar insumos.")
+                estado_vacio("Sem dados de estoque ainda.", "Vá a Estoque para cadastrar insumos.")
 
         with ui.card().classes("flex-1"):
-            ui.label("Producción de leche — últimos 7 días").classes("font-bold mb-1")
-            ui.label("Litros totales por día en la última semana.").classes("help-text mb-2")
+            ui.label("Produção de leite — últimos 7 dias").classes("font-bold mb-1")
+            ui.label("Litros totais por dia na última semana.").classes("help-text mb-2")
             if not df_prod.empty:
                 ui.echart({
                     "tooltip": {"trigger": "axis"},
@@ -395,11 +395,11 @@ def dashboard() -> None:
                                 "smooth": True, "areaStyle": {}, "itemStyle": {"color": "#16a34a"}}],
                 }).classes("w-full h-64")
             else:
-                estado_vacio("Sin registros de leche aún.", "Andá a Leche para registrar ordeñes.")
+                estado_vacio("Sem registros de leite ainda.", "Vá a Leite para registrar ordenhas.")
 
         with ui.card().classes("flex-1"):
             ui.label("Vacas por grupo").classes("font-bold mb-1")
-            ui.label("Distribución de animales según su grupo de alimentación.").classes("help-text mb-2")
+            ui.label("Distribuição de animais por grupo de alimentação.").classes("help-text mb-2")
             if not df_categorias.empty:
                 pie_data = [
                     {"value": int(r["total"]), "name": str(r["grupo"]).capitalize()}
@@ -417,7 +417,7 @@ def dashboard() -> None:
                     }],
                 }).classes("w-full h-64")
             else:
-                estado_vacio("Sin grupos cargados aún.", "Andá a Vacas para agregar animales.")
+                estado_vacio("Sem grupos cadastrados ainda.", "Vá a Vacas para adicionar animais.")
 
 
 # ── VACAS ─────────────────────────────────────────────────────────────────────
@@ -426,8 +426,8 @@ def dashboard() -> None:
 def vacas_page() -> None:
     nav("/vacas")
     with ui.column().classes("px-4 pt-4 pb-1"):
-        ui.label("🐄 Registro de Animales").classes("text-2xl font-bold")
-        ui.label("Acá podés ver todos tus animales y agregar nuevos al plantel.").classes("text-sm text-grey-6")
+        ui.label("🐄 Registro de Animais").classes("text-2xl font-bold")
+        ui.label("Aqui você pode ver todos os seus animais e adicionar novos ao rebanho.").classes("text-sm text-grey-6")
 
     try:
         grupos_opts = [ELEGIR] + list(
@@ -443,7 +443,7 @@ def vacas_page() -> None:
             df = read_sql("""
                 SELECT COALESCE(grupo,'(sin grupo)') AS "Grupo",
                        COUNT(*)::int AS "Animales"
-                FROM tabla_vacas WHERE estado='activa'
+                FROM tabla_vacas WHERE estado='ativa'
                 GROUP BY grupo ORDER BY "Animales" DESC
             """)
             if not df.empty:
@@ -453,22 +453,22 @@ def vacas_page() -> None:
                             ui.label(str(row["Grupo"]).capitalize()).classes("text-xs text-grey-6 font-medium")
                             ui.label(str(row["Animales"])).classes("text-3xl font-bold text-blue-700")
             else:
-                estado_vacio("Todavía no hay animales en el sistema.", "Usá el formulario de abajo para agregar el primero.")
+                estado_vacio("Ainda não há animais no sistema.", "Use o formulário abaixo para adicionar o primeiro.")
         except Exception as exc:
-            ui.label("Error al cargar grupos.").classes("text-red")
+            ui.label("Erro ao carregar grupos.").classes("text-red")
 
     @ui.refreshable
     def tabla_vacas() -> None:
         try:
             df = read_sql("""
                 SELECT vaca_id                         AS id,
-                       COALESCE(nombre,'—')            AS "Nombre / Etiqueta",
+                       COALESCE(nombre,'—')            AS "Nome / Etiqueta",
                        COALESCE(grupo,'—')             AS "Grupo",
                        estado                          AS "Estado"
                 FROM tabla_vacas ORDER BY grupo, nombre
             """)
             if df.empty:
-                estado_vacio("Todavía no hay animales en el sistema.")
+                estado_vacio("Ainda não há animais no sistema.")
                 return
             cols = [
                 {"name": "id",     "label": "",                  "field": "id",     "sortable": False},
@@ -486,27 +486,27 @@ def vacas_page() -> None:
             """)
             tbl.on("ver", lambda e: ui.navigate.to(f"/vaca/{e.args['id']}"))
         except Exception as exc:
-            ui.label("Error al cargar el listado.").classes("text-red")
+            ui.label("Erro ao carregar a lista.").classes("text-red")
 
     with ui.card().classes("mx-4 mb-4"):
-        ui.label("Animales por Grupo").classes("text-lg font-bold mb-3")
+        ui.label("Animais por Grupo").classes("text-lg font-bold mb-3")
         resumen_grupos()
 
     with ui.card().classes("mx-4 mb-4"):
-        ui.label("Agregar un Animal").classes("text-lg font-bold mb-1")
-        ui.label("Solo el Grupo es obligatorio. El nombre es un apodo o número para identificarlo fácilmente.").classes("help-text mb-4")
+        ui.label("Adicionar um Animal").classes("text-lg font-bold mb-1")
+        ui.label("Somente o Grupo é obrigatório. O nome é um apelido ou número para identificar o animal com facilidade.").classes("help-text mb-4")
         aviso_requeridos()
         with ui.row().classes("gap-6 items-end flex-wrap mt-3"):
             with ui.column().classes("gap-1"):
-                campo("Grupo", "¿En qué grupo de alimentación va este animal?", required=True)
+                campo("Grupo", "Em qual grupo de alimentação vai este animal?", required=True)
                 grupo = ui.select(grupos_opts, value=grupos_opts[0]).classes("w-56")
             with ui.column().classes("gap-1"):
-                campo("Nombre o Etiqueta", "Podés escribir un apodo, número o código. Si lo dejás vacío se asigna uno automático.")
-                nombre = ui.input(placeholder="Ej: Manchita, #42, Oreja-Amarilla…").classes("w-56")
+                campo("Nome ou Etiqueta", "Você pode escrever um apelido, número ou código. Se deixar em branco, será atribuído automaticamente.")
+                nombre = ui.input(placeholder="Ex: Manchinha, #42, Orelha-Amarela…").classes("w-56")
 
             def guardar_vaca() -> None:
                 if grupo.value == ELEGIR:
-                    notificar_aviso("Primero elegí el grupo al que pertenece el animal.")
+                    notificar_aviso("Primeiro escolha o grupo ao qual pertence o animal.")
                     return
                 try:
                     conn = conectar(); cur = conn.cursor()
@@ -516,23 +516,23 @@ def vacas_page() -> None:
                         n = cur.fetchone()[0] + 1
                         nombre_val = f"Animal {n}"
                     cur.execute(
-                        "INSERT INTO tabla_vacas (nombre, grupo, estado) VALUES (%s, %s, 'activa')",
+                        "INSERT INTO tabla_vacas (nombre, grupo, estado) VALUES (%s, %s, 'ativa')",
                         (nombre_val, grupo.value),
                     )
                     conn.commit(); cur.close(); conn.close()
-                    notificar_ok(f"✓ {nombre_val} fue agregado al grupo '{grupo.value}'.")
+                    notificar_ok(f"✓ {nombre_val} foi adicionado ao grupo '{grupo.value}'.")
                     nombre.value = ""
                     tabla_vacas.refresh()
                     resumen_grupos.refresh()
                 except Exception as exc:
                     notificar_error(exc)
 
-            ui.button("➕  Agregar Animal", on_click=guardar_vaca).classes(
+            ui.button("➕  Adicionar Animal", on_click=guardar_vaca).classes(
                 "bg-blue-700 text-white font-bold px-8 py-3 text-base"
             )
 
     with ui.card().classes("mx-4 mb-4"):
-        ui.label("Todos los Animales").classes("text-lg font-bold mb-2")
+        ui.label("Todos os Animais").classes("text-lg font-bold mb-2")
         tabla_vacas()
 
 
@@ -542,15 +542,15 @@ def vacas_page() -> None:
 def salud_page() -> None:
     nav("/salud")
     with ui.column().classes("px-4 pt-4 pb-1"):
-        ui.label("💊 Control Sanitario").classes("text-2xl font-bold")
-        ui.label("Registrá cualquier atención veterinaria: vacunas, tratamientos o revisiones.").classes("text-sm text-grey-6")
+        ui.label("💊 Controle Sanitário").classes("text-2xl font-bold")
+        ui.label("Registre qualquer atendimento veterinário: vacinas, tratamentos ou revisões.").classes("text-sm text-grey-6")
 
     try:
         vacas_opts = [ELEGIR] + list(
-            read_sql("SELECT nombre FROM tabla_vacas WHERE estado='activa' ORDER BY nombre")["nombre"]
+            read_sql("SELECT nombre FROM tabla_vacas WHERE estado='ativa' ORDER BY nombre")["nombre"]
         )
     except Exception as exc:
-        ui.label("No se pudo cargar la lista de animales. Avisá al administrador.").classes("text-red m-4 font-semibold")
+        ui.label("Não foi possível carregar a lista de animais. Avise o administrador.").classes("text-red m-4 font-semibold")
         return
 
     @ui.refreshable
@@ -558,11 +558,11 @@ def salud_page() -> None:
         try:
             df = read_sql("""
                 SELECT v.nombre      AS "Animal",
-                       TO_CHAR(s.fecha,'DD/MM/YYYY') AS "Fecha",
+                       TO_CHAR(s.fecha,'DD/MM/YYYY') AS "Data",
                        s.tipo_evento AS "Tipo de Atención",
-                       s.descripcion AS "Descripción",
-                       COALESCE(s.veterinario,'—') AS "Veterinario",
-                       s.costo       AS "Costo $"
+                       s.descripcion AS "Descrição",
+                       COALESCE(s.veterinario,'—') AS "Veterinário",
+                       s.costo       AS "Custo R$"
                 FROM tabla_salud s
                 JOIN tabla_vacas v ON s.vaca_id = v.vaca_id
                 ORDER BY s.fecha DESC LIMIT 100
@@ -583,13 +583,13 @@ def salud_page() -> None:
                 campo("Tipo de atención", "¿Qué tipo de intervención fue?", required=True)
                 tipo = ui.select(TIPOS_EVENTO, value=TIPOS_EVENTO[0]).classes("w-full")
 
-                campo("Veterinario", "Nombre del veterinario o técnico que atendió (opcional).")
+                campo("Veterinário", "Nombre del veterinario o técnico que atendió (opcional).")
                 vet = ui.input(placeholder="Ej: Dr. Rodríguez").classes("w-full")
 
                 campo("Costo en pesos ($)", "Cuánto costó la atención. Podés dejarlo en 0 si no sabés.")
                 costo = ui.number(value=0.0, min=0, step=0.5).classes("w-full")
             with ui.column().classes("flex-1"):
-                campo("Descripción", "Anotá los detalles más importantes de la atención.")
+                campo("Descrição", "Anotá los detalles más importantes de la atención.")
                 descr = ui.textarea(placeholder="Ej: Se aplicó vacuna antiaftosa lote 2025. Sin reacciones.").classes("w-full h-52")
 
         def guardar_salud() -> None:
@@ -611,7 +611,7 @@ def salud_page() -> None:
             except Exception as exc:
                 notificar_error(exc)
 
-        ui.button("💾  Guardar Atención", on_click=guardar_salud).classes(
+        ui.button("💾  Salvar Atendimento", on_click=guardar_salud).classes(
             "mt-4 bg-blue-700 text-white font-bold px-8 py-3 text-base"
         )
 
@@ -632,10 +632,10 @@ def leche_page() -> None:
     try:
         vacas_data = read_sql("""
             SELECT vaca_id, COALESCE(nombre,'—') AS nombre, COALESCE(grupo,'') AS grupo
-            FROM tabla_vacas WHERE estado='activa' ORDER BY grupo, nombre
+            FROM tabla_vacas WHERE estado='ativa' ORDER BY grupo, nombre
         """).to_dict("records")
     except Exception as exc:
-        ui.label("No se pudo cargar la lista de animales. Avisá al administrador.").classes("text-red m-4 font-semibold")
+        ui.label("Não foi possível carregar a lista de animais. Avise o administrador.").classes("text-red m-4 font-semibold")
         return
 
     estado = {"vaca_id": None, "nombre": ""}
@@ -740,7 +740,7 @@ def leche_page() -> None:
 def dietas_page() -> None:
     nav("/dietas")
     with ui.column().classes("px-4 pt-4 pb-1"):
-        ui.label("🥗 Dietas y Raciones").classes("text-2xl font-bold")
+        ui.label("🥗 Dietas e Rações").classes("text-2xl font-bold")
         ui.label("Cuánto come por día cada grupo de animales y qué ingredientes lleva su ración.").classes("text-sm text-grey-6")
 
     try:
@@ -882,7 +882,7 @@ def bodega_page() -> None:
         if df.empty:
             estado_vacio(
                 "Todavía no hay insumos cargados.",
-                "Usá el formulario de abajo para agregar el primero."
+                "Use o formulário abaixo para adicionar o primeiro."
             )
             return
 
@@ -1052,8 +1052,8 @@ def maquinaria_page() -> None:
     def tabla_maquinas() -> None:
         try:
             df = read_sql("""
-                SELECT nombre AS "Nombre", tipo AS "Tipo", marca AS "Marca",
-                       modelo AS "Modelo", anio AS "Año", estado AS "Estado"
+                SELECT nombre AS "Nome", tipo AS "Tipo", marca AS "Marca",
+                       modelo AS "Modelo", anio AS "Ano", estado AS "Estado"
                 FROM tabla_maquinaria ORDER BY nombre
             """)
             if df.empty:
@@ -1061,26 +1061,26 @@ def maquinaria_page() -> None:
             else:
                 df_to_table(df)
         except Exception as exc:
-            ui.label("Error al cargar el listado.").classes("text-red")
+            ui.label("Erro ao carregar a lista.").classes("text-red")
 
     @ui.refreshable
     def tabla_mantenimiento() -> None:
         try:
             df = read_sql("""
                 SELECT m.nombre AS "Máquina",
-                       TO_CHAR(t.fecha,'DD/MM/YYYY') AS "Fecha",
+                       TO_CHAR(t.fecha,'DD/MM/YYYY') AS "Data",
                        t.tipo_mantencion             AS "Tipo",
-                       t.descripcion                 AS "Descripción",
+                       t.descripcion                 AS "Descrição",
                        COALESCE(t.tecnico,'—')       AS "Técnico",
                        t.horas_uso                   AS "Horas uso",
-                       t.costo                       AS "Costo $",
+                       t.costo                       AS "Custo R$",
                        TO_CHAR(t.proximo_mantenimiento,'DD/MM/YYYY') AS "Próximo mant."
                 FROM tabla_mantenimiento t
                 JOIN tabla_maquinaria m ON t.maquina_id = m.maquina_id
                 ORDER BY t.fecha DESC LIMIT 100
             """)
             if df.empty:
-                estado_vacio("Todavía no hay mantenimientos registrados.")
+                estado_vacio("Ainda não há manutenções registradas.")
             else:
                 df_to_table(df)
         except Exception as exc:
@@ -1092,7 +1092,7 @@ def maquinaria_page() -> None:
         aviso_requeridos()
         with ui.row().classes("w-full gap-4 mt-3"):
             with ui.column().classes("flex-1 gap-3"):
-                campo("Nombre de la máquina", "Usá un nombre que la identifique claramente en tu campo.", required=True)
+                campo("Nome da máquina", "Usá un nombre que la identifique claramente en tu campo.", required=True)
                 nombre_maq = ui.input(placeholder="Ej: Tractor Principal, Ordeñadora N°1").classes("w-full")
                 campo("Tipo de máquina", "¿Para qué se usa principalmente?")
                 tipo_maq = ui.select(TIPOS_MAQUINARIA, value=TIPOS_MAQUINARIA[0]).classes("w-full")
@@ -1108,7 +1108,7 @@ def maquinaria_page() -> None:
 
         def guardar_maquina() -> None:
             if not nombre_maq.value.strip():
-                notificar_aviso("El nombre de la máquina es obligatorio.")
+                notificar_aviso("O nome da máquina é obrigatório.")
                 return
             try:
                 conn = conectar(); cur = conn.cursor()
@@ -1132,7 +1132,7 @@ def maquinaria_page() -> None:
         )
 
     with ui.card().classes("mx-4 mb-4"):
-        ui.label("Máquinas Registradas").classes("text-lg font-bold mb-2")
+        ui.label("Máquinas Cadastradas").classes("text-lg font-bold mb-2")
         tabla_maquinas()
 
     with ui.card().classes("mx-4 mb-4"):
@@ -1157,7 +1157,7 @@ def maquinaria_page() -> None:
 
         with ui.row().classes("w-full gap-4"):
             with ui.column().classes("flex-1 gap-3"):
-                campo("Tipo de mantenimiento", "¿Qué clase de trabajo se realizó?")
+                campo("Tipo de manutenção", "¿Qué clase de trabajo se realizó?")
                 tipo_mant = ui.select(TIPOS_MANTENCION, value=TIPOS_MANTENCION[0]).classes("w-full")
                 campo("Técnico o taller", "Quién hizo el trabajo.")
                 tecnico = ui.input(placeholder="Ej: Taller Los Pinos, Juan Méndez").classes("w-full")
@@ -1168,7 +1168,7 @@ def maquinaria_page() -> None:
             with ui.column().classes("flex-1 gap-3"):
                 campo("Descripción del trabajo", "Detallá qué se hizo, qué piezas se cambiaron, etc.")
                 descr_mant = ui.textarea(placeholder="Ej: Cambio de aceite y filtros. Se revisaron frenos.").classes("w-full h-32")
-                campo("Próximo mantenimiento", "Cuándo hay que volver a hacerle servicio.")
+                campo("Próxima manutenção", "Cuándo hay que volver a hacerle servicio.")
                 prox_mant = ui.date().classes("w-full")
 
         def guardar_mantenimiento() -> None:
@@ -1199,7 +1199,7 @@ def maquinaria_page() -> None:
         )
 
     with ui.card().classes("mx-4 mb-4"):
-        ui.label("Historial de Mantenimientos").classes("text-lg font-bold mb-2")
+        ui.label("Histórico de Manutenções").classes("text-lg font-bold mb-2")
         tabla_mantenimiento()
 
 
@@ -1209,15 +1209,15 @@ def maquinaria_page() -> None:
 def reproduccion_page() -> None:
     nav("/reproduccion")
     with ui.column().classes("px-4 pt-4 pb-1"):
-        ui.label("🐣 Reproducción").classes("text-2xl font-bold")
+        ui.label("🐣 Reprodução").classes("text-2xl font-bold")
         ui.label("Controlá las fechas de fertilización y hacé seguimiento de los partos esperados.").classes("text-sm text-grey-6")
 
     try:
         vacas_opts = [ELEGIR] + list(
-            read_sql("SELECT nombre FROM tabla_vacas WHERE estado='activa' ORDER BY nombre")["nombre"]
+            read_sql("SELECT nombre FROM tabla_vacas WHERE estado='ativa' ORDER BY nombre")["nombre"]
         )
     except Exception as exc:
-        ui.label("No se pudo cargar la lista de animales. Avisá al administrador.").classes("text-red m-4 font-semibold")
+        ui.label("Não foi possível carregar a lista de animais. Avise o administrador.").classes("text-red m-4 font-semibold")
         return
 
     @ui.refreshable
@@ -1225,7 +1225,7 @@ def reproduccion_page() -> None:
         try:
             fertil_mes  = int(read_sql("""
                 SELECT COUNT(*) FROM tabla_reproduccion
-                WHERE tipo_evento='Fertilización'
+                WHERE tipo_evento='Fertilização'
                   AND DATE_TRUNC('month',fecha_evento)=DATE_TRUNC('month',CURRENT_DATE)
             """).iloc[0, 0])
             partos_mes  = int(read_sql("""
@@ -1235,7 +1235,7 @@ def reproduccion_page() -> None:
             """).iloc[0, 0])
             prox_partos = int(read_sql("""
                 SELECT COUNT(*) FROM tabla_reproduccion
-                WHERE tipo_evento='Fertilización'
+                WHERE tipo_evento='Fertilização'
                   AND fecha_parto_esperado BETWEEN CURRENT_DATE AND CURRENT_DATE+30
             """).iloc[0, 0])
         except Exception as exc:
@@ -1266,7 +1266,7 @@ def reproduccion_page() -> None:
                        (r.fecha_parto_esperado-CURRENT_DATE)::int AS dias
                 FROM tabla_reproduccion r
                 JOIN tabla_vacas v ON r.vaca_id=v.vaca_id
-                WHERE r.tipo_evento='Fertilización'
+                WHERE r.tipo_evento='Fertilização'
                   AND r.fecha_parto_esperado >= CURRENT_DATE
                 ORDER BY r.fecha_parto_esperado ASC LIMIT 30
             """)
@@ -1285,11 +1285,11 @@ def reproduccion_page() -> None:
             for _, r in df.iterrows():
                 dias = int(r["dias"])
                 if dias <= 7:
-                    bg, badge_color, urgencia = "bg-red-50 border-red-300", "red", f"¡En {dias} día{'s' if dias != 1 else ''}!"
+                    bg, badge_color, urgencia = "bg-red-50 border-red-300", "red", f"Em {dias} dia{'s' if dias != 1 else ''}!"
                 elif dias <= 30:
-                    bg, badge_color, urgencia = "bg-amber-50 border-amber-300", "amber", f"En {dias} días"
+                    bg, badge_color, urgencia = "bg-amber-50 border-amber-300", "amber", f"Em {dias} dias"
                 else:
-                    bg, badge_color, urgencia = "bg-green-50 border-green-300", "green", f"En {dias} días"
+                    bg, badge_color, urgencia = "bg-green-50 border-green-300", "green", f"Em {dias} dias"
 
                 fecha_fmt = pd.to_datetime(r["fecha_parto"]).strftime("%d/%m/%Y") if r["fecha_parto"] else "—"
                 fert_fmt  = r["fecha_fert"][:10] if r["fecha_fert"] else "—"
@@ -1324,12 +1324,12 @@ def reproduccion_page() -> None:
             with ui.column().classes("flex-1 gap-3"):
                 campo("¿A qué vaca?", "", required=True)
                 vaca_f = ui.select(vacas_opts, value=vacas_opts[0]).classes("w-full")
-                campo("Tipo de fertilización", "¿Cómo se realizó?", required=True)
+                campo("Tipo de fertilização", "¿Cómo se realizó?", required=True)
                 tipo_f = ui.select(TIPOS_FERTILIZACION, value=TIPOS_FERTILIZACION[0]).classes("w-full")
                 campo("Fecha de la fertilización", "El día en que se realizó.", required=True)
                 fecha_f = ui.date().classes("w-full")
             with ui.column().classes("flex-1"):
-                campo("Observaciones", "Anotá el toro utilizado, la dosis, el proveedor o cualquier dato útil.")
+                campo("Observações", "Anotá el toro utilizado, la dosis, el proveedor o cualquier dato útil.")
                 obs_f = ui.textarea(placeholder="Ej: Semen toro 'Relampago', dosis n.º 3, sin complicaciones.").classes("w-full h-44")
 
         def guardar_fertilizacion() -> None:
@@ -1348,7 +1348,7 @@ def reproduccion_page() -> None:
                 cur.execute("""
                     INSERT INTO tabla_reproduccion
                         (vaca_id, tipo_evento, fecha_evento, tipo_fertilizacion, fecha_parto_esperado, observaciones)
-                    VALUES (%s,'Fertilización',%s,%s,%s,%s)
+                    VALUES (%s,'Fertilização',%s,%s,%s,%s)
                 """, (vaca_id, fecha_fert, tipo_f.value, fecha_parto_esp, obs_f.value or None))
                 conn.commit(); cur.close(); conn.close()
                 notificar_ok(
@@ -1377,14 +1377,14 @@ def reproduccion_page() -> None:
                 vaca_p = ui.select(vacas_opts, value=vacas_opts[0]).classes("w-full")
                 campo("Fecha del parto", "", required=True)
                 fecha_p = ui.date().classes("w-full")
-                campo("Resultado del parto", "¿Cómo salió el parto?", required=True)
+                campo("Resultado do parto", "¿Cómo salió el parto?", required=True)
                 resultado_p = ui.select(RESULTADOS_PARTO, value=RESULTADOS_PARTO[0]).classes("w-full")
             with ui.column().classes("flex-1 gap-3"):
-                campo("Sexo de la cría", "Si nació una cría viva, ¿es macho o hembra?")
-                sexo_p = ui.select(["No aplica", "Hembra", "Macho"], value="No aplica").classes("w-full")
-                campo("Peso de la cría (kg)", "Cuánto pesó al nacer. Podés dejarlo en 0 si no lo pesaron.")
+                campo("Sexo da cria", "Si nació una cría viva, ¿es macho o hembra?")
+                sexo_p = ui.select(["No aplica", "Fêmea", "Macho"], value="No aplica").classes("w-full")
+                campo("Peso da cria (kg)", "Cuánto pesó al nacer. Podés dejarlo en 0 si no lo pesaron.")
                 peso_p = ui.number(value=0.0, min=0, step=0.5).classes("w-full")
-                campo("Observaciones", "Cualquier detalle relevante del parto.")
+                campo("Observações", "Cualquier detalle relevante del parto.")
                 obs_p = ui.textarea(placeholder="Ej: Se requirió asistencia veterinaria. Cría vigorosa.").classes("w-full h-24")
 
         def guardar_parto() -> None:
@@ -1424,12 +1424,12 @@ def reproduccion_page() -> None:
             df = read_sql("""
                 SELECT v.nombre                                            AS "Animal",
                        r.tipo_evento                                       AS "Evento",
-                       TO_CHAR(r.fecha_evento,'DD/MM/YYYY')               AS "Fecha",
+                       TO_CHAR(r.fecha_evento,'DD/MM/YYYY')               AS "Data",
                        COALESCE(r.tipo_fertilizacion, r.resultado_parto)  AS "Detalle",
                        COALESCE(TO_CHAR(r.fecha_parto_esperado,'DD/MM/YYYY'),'—') AS "Parto Esperado",
                        COALESCE(r.sexo_cria,'—')                          AS "Sexo Cría",
                        COALESCE(r.peso_cria_kg::text,'—')                 AS "Peso Cría (kg)",
-                       COALESCE(r.observaciones,'—')                      AS "Observaciones"
+                       COALESCE(r.observaciones,'—')                      AS "Observações"
                 FROM tabla_reproduccion r
                 JOIN tabla_vacas v ON r.vaca_id=v.vaca_id
                 ORDER BY r.fecha_evento DESC, r.registro_id DESC LIMIT 100
@@ -1453,7 +1453,7 @@ def reproduccion_page() -> None:
 def finanzas_page() -> None:
     nav("/finanzas")
     with ui.column().classes("px-4 pt-4 pb-1"):
-        ui.label("💰 Finanzas").classes("text-2xl font-bold")
+        ui.label("💰 Finanças").classes("text-2xl font-bold")
         ui.label("Registrá tus ingresos y gastos para saber cómo está la plata de tu granja.").classes("text-sm text-grey-6")
 
     # ── KPIs del mes actual ───────────────────────────────────────────────────
@@ -1462,12 +1462,12 @@ def finanzas_page() -> None:
         try:
             ingresos_mes = float(read_sql("""
                 SELECT COALESCE(SUM(monto),0) FROM tabla_finanzas
-                WHERE tipo='Ingreso'
+                WHERE tipo='Receita'
                   AND DATE_TRUNC('month',fecha)=DATE_TRUNC('month',CURRENT_DATE)
             """).iloc[0, 0])
             egresos_mes = float(read_sql("""
                 SELECT COALESCE(SUM(monto),0) FROM tabla_finanzas
-                WHERE tipo='Egreso'
+                WHERE tipo='Despesa'
                   AND DATE_TRUNC('month',fecha)=DATE_TRUNC('month',CURRENT_DATE)
             """).iloc[0, 0])
             # Costos automáticos del mes (salud + mantenimiento)
@@ -1483,11 +1483,11 @@ def finanzas_page() -> None:
             balance_mes   = ingresos_mes - egresos_mes
             ingresos_anio = float(read_sql("""
                 SELECT COALESCE(SUM(monto),0) FROM tabla_finanzas
-                WHERE tipo='Ingreso' AND EXTRACT(year FROM fecha)=EXTRACT(year FROM CURRENT_DATE)
+                WHERE tipo='Receita' AND EXTRACT(year FROM fecha)=EXTRACT(year FROM CURRENT_DATE)
             """).iloc[0, 0])
             egresos_anio = float(read_sql("""
                 SELECT COALESCE(SUM(monto),0) FROM tabla_finanzas
-                WHERE tipo='Egreso' AND EXTRACT(year FROM fecha)=EXTRACT(year FROM CURRENT_DATE)
+                WHERE tipo='Despesa' AND EXTRACT(year FROM fecha)=EXTRACT(year FROM CURRENT_DATE)
             """).iloc[0, 0])
             balance_anio = ingresos_anio - egresos_anio
         except Exception as exc:
@@ -1546,7 +1546,7 @@ def finanzas_page() -> None:
             df_categ = read_sql("""
                 SELECT categoria, SUM(monto)::float AS total
                 FROM tabla_finanzas
-                WHERE tipo='Egreso'
+                WHERE tipo='Despesa'
                   AND fecha >= CURRENT_DATE - INTERVAL '6 months'
                 GROUP BY categoria ORDER BY total DESC
             """)
@@ -1555,7 +1555,7 @@ def finanzas_page() -> None:
             return
 
         if df_mensual.empty:
-            estado_vacio("Todavía no hay movimientos registrados.", "Usá el formulario de abajo para cargar el primero.")
+            estado_vacio("Ainda não há movimentos registrados.", "Usá el formulario de abajo para cargar el primero.")
             return
 
         meses = sorted(df_mensual["mes"].unique(), key=lambda m: df_mensual.loc[df_mensual["mes"] == m, "mes_ord"].iloc[0])
@@ -1563,8 +1563,8 @@ def finanzas_page() -> None:
         egr_vals = []
         for m in meses:
             sub = df_mensual[df_mensual["mes"] == m]
-            ing_row = sub[sub["tipo"] == "Ingreso"]
-            egr_row = sub[sub["tipo"] == "Egreso"]
+            ing_row = sub[sub["tipo"] == "Receita"]
+            egr_row = sub[sub["tipo"] == "Despesa"]
             ing_vals.append(float(ing_row["total"].iloc[0]) if not ing_row.empty else 0)
             egr_vals.append(float(egr_row["total"].iloc[0]) if not egr_row.empty else 0)
 
@@ -1574,14 +1574,14 @@ def finanzas_page() -> None:
                 ui.label("Verde = dinero que entró · Rojo = dinero que salió").classes("help-text mb-2")
                 ui.echart({
                     "tooltip": {"trigger": "axis"},
-                    "legend": {"data": ["Ingresos", "Egresos"], "bottom": 0},
+                    "legend": {"data": ["Receitas", "Despesas"], "bottom": 0},
                     "grid": {"left": "8%", "right": "4%", "top": "6%", "bottom": "14%"},
                     "xAxis": {"type": "category", "data": list(meses)},
                     "yAxis": {"type": "value", "axisLabel": {"formatter": "${value}"}},
                     "series": [
-                        {"name": "Ingresos", "type": "bar", "data": ing_vals,
+                        {"name": "Receitas", "type": "bar", "data": ing_vals,
                          "itemStyle": {"color": "#16a34a"}, "barMaxWidth": 40},
-                        {"name": "Egresos",  "type": "bar", "data": egr_vals,
+                        {"name": "Despesas",  "type": "bar", "data": egr_vals,
                          "itemStyle": {"color": "#ef4444"}, "barMaxWidth": 40},
                     ],
                 }).classes("w-full h-64")
@@ -1612,7 +1612,7 @@ def finanzas_page() -> None:
             df_bal = read_sql("""
                 SELECT TO_CHAR(DATE_TRUNC('month',fecha),'MM/YYYY') AS mes,
                        DATE_TRUNC('month',fecha)                     AS mes_ord,
-                       SUM(CASE WHEN tipo='Ingreso' THEN monto ELSE -monto END)::float AS balance
+                       SUM(CASE WHEN tipo='Receita' THEN monto ELSE -monto END)::float AS balance
                 FROM tabla_finanzas
                 WHERE fecha >= CURRENT_DATE - INTERVAL '6 months'
                 GROUP BY DATE_TRUNC('month',fecha)
@@ -1655,14 +1655,14 @@ def finanzas_page() -> None:
         with ui.row().classes("w-full gap-4 mt-3 flex-wrap"):
             with ui.column().classes("gap-3 flex-1"):
                 campo("¿Es un ingreso o un gasto?", "", required=True)
-                tipo_mov = ui.select(["Ingreso", "Egreso"], value="Ingreso").classes("w-full")
+                tipo_mov = ui.select(["Receita", "Despesa"], value="Receita").classes("w-full")
 
                 cat_label_el = ui.label("Categoría *").classes("text-sm font-semibold text-grey-8 mt-1")
                 cat_help_el  = ui.label("¿De qué tipo es este movimiento?").classes("help-text")
                 categoria    = ui.select(CATEGORIAS_INGRESO, value=CATEGORIAS_INGRESO[0]).classes("w-full")
 
                 def actualizar_categorias() -> None:
-                    if tipo_mov.value == "Ingreso":
+                    if tipo_mov.value == "Receita":
                         categoria.options = CATEGORIAS_INGRESO
                         categoria.value   = CATEGORIAS_INGRESO[0]
                     else:
@@ -1675,11 +1675,11 @@ def finanzas_page() -> None:
                 campo("Monto en pesos ($)", "¿Cuánto dinero fue? Solo el número, sin el signo $.", required=True)
                 monto = ui.number(value=0.0, min=0, step=100, prefix="$").classes("w-full")
 
-                campo("Fecha", "¿Cuándo ocurrió?", required=True)
+                campo("Data", "Quando ocorreu?", required=True)
                 fecha_mov = ui.date(value=date.today().isoformat()).classes("w-full")
 
             with ui.column().classes("flex-1"):
-                campo("Descripción", "Anotá los detalles para recordar de qué se trató.")
+                campo("Descrição", "Anotá los detalles para recordar de qué se trató.")
                 descripcion = ui.textarea(
                     placeholder="Ej: Venta de 4.200 litros de leche a $0.42/lt · Taller López — cambio de aceite tractor"
                 ).classes("w-full h-44")
@@ -1699,7 +1699,7 @@ def finanzas_page() -> None:
                      descripcion.value or None, monto.value),
                 )
                 conn.commit(); cur.close(); conn.close()
-                signo = "+" if tipo_mov.value == "Ingreso" else "-"
+                signo = "+" if tipo_mov.value == "Receita" else "-"
                 notificar_ok(f"✓ {tipo_mov.value} de ${monto.value:,.0f} registrado correctamente ({signo}).")
                 monto.value = 0.0; descripcion.value = ""
                 kpis.refresh()
@@ -1708,7 +1708,7 @@ def finanzas_page() -> None:
             except Exception as exc:
                 notificar_error(exc)
 
-        ui.button("💾  Guardar Movimiento", on_click=guardar_movimiento).classes(
+        ui.button("💾  Salvar Movimento", on_click=guardar_movimiento).classes(
             "mt-4 bg-blue-700 text-white font-bold px-8 py-3 text-base"
         )
 
@@ -1748,17 +1748,17 @@ def finanzas_page() -> None:
     def tabla_hist() -> None:
         try:
             df = read_sql("""
-                SELECT TO_CHAR(fecha,'DD/MM/YYYY') AS "Fecha",
+                SELECT TO_CHAR(fecha,'DD/MM/YYYY') AS "Data",
                        tipo                         AS "Tipo",
-                       categoria                    AS "Categoría",
-                       descripcion                  AS "Descripción",
-                       monto                        AS "Monto $"
+                       categoria                    AS "Categoria",
+                       descripcion                  AS "Descrição",
+                       monto                        AS "Valor R$"
                 FROM tabla_finanzas
                 ORDER BY fecha DESC, finanza_id DESC
                 LIMIT 100
             """)
             if df.empty:
-                estado_vacio("Todavía no hay movimientos registrados.", "Usá el formulario de arriba para agregar el primero.")
+                estado_vacio("Ainda não há movimentos registrados.", "Usá el formulario de arriba para agregar el primero.")
             else:
                 df_to_table(df)
         except Exception as exc:
@@ -1775,7 +1775,7 @@ def finanzas_page() -> None:
 def empleados_page() -> None:
     nav("/empleados")
     with ui.column().classes("px-4 pt-4 pb-1"):
-        ui.label("👷 Empleados").classes("text-2xl font-bold")
+        ui.label("👷 Funcionários").classes("text-2xl font-bold")
         ui.label("Registrá tu personal, sus cargos y llevá el historial de pagos.").classes("text-sm text-grey-6")
 
     # ── KPIs ─────────────────────────────────────────────────────────────────
@@ -1783,10 +1783,10 @@ def empleados_page() -> None:
     def kpis_emp() -> None:
         try:
             activos = int(read_sql(
-                "SELECT COUNT(*) FROM tabla_empleados WHERE estado='activo'"
+                "SELECT COUNT(*) FROM tabla_empleados WHERE estado='ativo'"
             ).iloc[0, 0])
             nomina = float(read_sql(
-                "SELECT COALESCE(SUM(sueldo_base),0) FROM tabla_empleados WHERE estado='activo'"
+                "SELECT COALESCE(SUM(sueldo_base),0) FROM tabla_empleados WHERE estado='ativo'"
             ).iloc[0, 0])
             pagos_mes = float(read_sql("""
                 SELECT COALESCE(SUM(monto),0) FROM tabla_pagos
@@ -1821,12 +1821,12 @@ def empleados_page() -> None:
                 ORDER BY estado DESC, cargo, nombre
             """)
         except Exception as exc:
-            ui.label("Error al cargar empleados.").classes("text-red")
+            ui.label("Erro ao carregar funcionários.").classes("text-red")
             return
 
         if df.empty:
-            estado_vacio("Todavía no hay empleados registrados.",
-                         "Usá el formulario de abajo para agregar el primero.")
+            estado_vacio("Ainda não há funcionários cadastrados.",
+                         "Use o formulário abaixo para adicionar o primeiro.")
             return
 
         with ui.grid(columns=3).classes("w-full gap-3 px-4 mb-2"):
@@ -1859,7 +1859,7 @@ def empleados_page() -> None:
 
         with ui.row().classes("w-full gap-4 mt-3"):
             with ui.column().classes("flex-1 gap-3"):
-                campo("Nombre completo", "", required=True)
+                campo("Nome completo", "", required=True)
                 nombre_emp = ui.input(placeholder="Ej: Juan Pérez").classes("w-full")
 
                 campo("Cargo", "¿Qué función cumple en la granja?", required=True)
@@ -1872,7 +1872,7 @@ def empleados_page() -> None:
                 campo("Teléfono de contacto", "Celular o teléfono fijo.")
                 tel_emp = ui.input(placeholder="Ej: +54 9 11 1234-5678").classes("w-full")
 
-                campo("Fecha de ingreso", "¿Desde cuándo trabaja aquí?")
+                campo("Data de admissão", "¿Desde cuándo trabaja aquí?")
                 fecha_ing_emp = ui.date(value=date.today().isoformat()).classes("w-full")
 
                 campo("Estado", "")
@@ -1880,7 +1880,7 @@ def empleados_page() -> None:
 
         def guardar_empleado() -> None:
             if not nombre_emp.value.strip():
-                notificar_aviso("El nombre del empleado es obligatorio.")
+                notificar_aviso("O nome do funcionário é obrigatório.")
                 return
             try:
                 conn = conectar(); cur = conn.cursor()
@@ -1906,15 +1906,15 @@ def empleados_page() -> None:
 
     # ── Formulario pago ───────────────────────────────────────────────────────
     with ui.card().classes("mx-4 mb-4"):
-        ui.label("💸 Registrar un Pago").classes("text-lg font-bold mb-1")
-        ui.label("Registrá sueldos, adelantos, bonos o liquidaciones.").classes("help-text mb-3")
+        ui.label("💸 Registrar um Pagamento").classes("text-lg font-bold mb-1")
+        ui.label("Registre salários, adiantamentos, bônus ou rescisões.").classes("help-text mb-3")
         aviso_requeridos()
 
         @ui.refreshable
         def selector_empleado() -> None:
             try:
                 df_e = read_sql(
-                    "SELECT nombre, sueldo_base FROM tabla_empleados WHERE estado='activo' ORDER BY nombre"
+                    "SELECT nombre, sueldo_base FROM tabla_empleados WHERE estado='ativo' ORDER BY nombre"
                 )
                 opts = [ELEGIR] + list(df_e["nombre"])
             except Exception:
@@ -1925,29 +1925,29 @@ def empleados_page() -> None:
 
         with ui.row().classes("w-full gap-4 mt-3"):
             with ui.column().classes("flex-1 gap-3"):
-                campo("¿A qué empleado?", "", required=True)
+                campo("Qual funcionário?", "", required=True)
                 emp_sel = ui.select([ELEGIR], value=ELEGIR).classes("w-full")
                 selector_empleado()
 
-                campo("Tipo de pago", "", required=True)
+                campo("Tipo de pagamento", "", required=True)
                 tipo_pago = ui.select(TIPOS_PAGO_EMP, value=TIPOS_PAGO_EMP[0]).classes("w-full")
 
-                campo("Monto ($)", "", required=True)
+                campo("Valor (R$)", "", required=True)
                 monto_pago = ui.number(value=0.0, min=0, step=500, prefix="$").classes("w-full")
 
-                campo("Fecha del pago", "", required=True)
+                campo("Data do pagamento", "", required=True)
                 fecha_pago = ui.date(value=date.today().isoformat()).classes("w-full")
 
             with ui.column().classes("flex-1"):
-                campo("Descripción", "Ej: Sueldo mayo 2026, Adelanto quincena, Premio productividad…")
-                desc_pago = ui.textarea(placeholder="Detalle del pago…").classes("w-full h-44")
+                campo("Descrição", "Ex: Salário maio 2026, Adiantamento quinzena, Prêmio produtividade…")
+                desc_pago = ui.textarea(placeholder="Detalhe do pagamento…").classes("w-full h-44")
 
         def guardar_pago() -> None:
             if emp_sel.value == ELEGIR:
-                notificar_aviso("Primero elegí el empleado.")
+                notificar_aviso("Primeiro escolha o funcionário.")
                 return
             if (monto_pago.value or 0) <= 0:
-                notificar_aviso("El monto debe ser mayor a 0.")
+                notificar_aviso("O valor deve ser maior que 0.")
                 return
             try:
                 conn = conectar(); cur = conn.cursor()
@@ -1959,14 +1959,14 @@ def empleados_page() -> None:
                      monto_pago.value, desc_pago.value or None),
                 )
                 conn.commit(); cur.close(); conn.close()
-                notificar_ok(f"✓ {tipo_pago.value} de ${monto_pago.value:,.0f} registrado para {emp_sel.value}.")
+                notificar_ok(f"✓ {tipo_pago.value} de R${monto_pago.value:,.0f} registrado para {emp_sel.value}.")
                 monto_pago.value = 0.0; desc_pago.value = ""
                 kpis_emp.refresh()
                 tabla_pagos.refresh()
             except Exception as exc:
                 notificar_error(exc)
 
-        ui.button("💾  Registrar Pago", on_click=guardar_pago).classes(
+        ui.button("💾  Registrar Pagamento", on_click=guardar_pago).classes(
             "mt-4 bg-green-700 text-white font-bold px-8 py-3 text-base"
         )
 
@@ -1975,27 +1975,27 @@ def empleados_page() -> None:
     def tabla_pagos() -> None:
         try:
             df = read_sql("""
-                SELECT e.nombre                          AS "Empleado",
+                SELECT e.nombre                          AS "Funcionário",
                        e.cargo                           AS "Cargo",
-                       TO_CHAR(p.fecha,'DD/MM/YYYY')    AS "Fecha",
+                       TO_CHAR(p.fecha,'DD/MM/YYYY')    AS "Data",
                        p.tipo                            AS "Tipo",
-                       p.monto                          AS "Monto $",
-                       COALESCE(p.descripcion,'—')      AS "Descripción"
+                       p.monto                          AS "Valor R$",
+                       COALESCE(p.descripcion,'—')      AS "Descrição"
                 FROM tabla_pagos p
                 JOIN tabla_empleados e ON p.empleado_id=e.empleado_id
                 ORDER BY p.fecha DESC, p.pago_id DESC
                 LIMIT 100
             """)
             if df.empty:
-                estado_vacio("Todavía no hay pagos registrados.",
-                             "Usá el formulario de arriba para registrar el primero.")
+                estado_vacio("Ainda não há pagamentos registrados.",
+                             "Use o formulário acima para registrar o primeiro.")
             else:
                 df_to_table(df)
         except Exception as exc:
-            ui.label("Error al cargar pagos.").classes("text-red")
+            ui.label("Erro ao carregar pagamentos.").classes("text-red")
 
     with ui.card().classes("mx-4 mb-4"):
-        ui.label("Historial de Pagos").classes("text-lg font-bold mb-2")
+        ui.label("Histórico de Pagamentos").classes("text-lg font-bold mb-2")
         tabla_pagos()
 
 
@@ -2005,16 +2005,16 @@ def empleados_page() -> None:
 def reportes_page() -> None:
     nav("/reportes")
     with ui.column().classes("px-4 pt-4 pb-2"):
-        ui.label("📊 Reportes").classes("text-2xl font-bold")
-        ui.label("Resúmenes y análisis de todas las áreas de tu granja.").classes("text-sm text-grey-6")
+        ui.label("📊 Relatórios").classes("text-2xl font-bold")
+        ui.label("Resumos e análises de todas as áreas da sua fazenda.").classes("text-sm text-grey-6")
 
     with ui.tabs().classes("w-full px-4 mt-2").props("dense") as tabs:
-        t_leche  = ui.tab("🥛 Leche")
-        t_salud  = ui.tab("💊 Salud")
-        t_reprod = ui.tab("🐣 Reproducción")
-        t_fin    = ui.tab("💰 Finanzas")
-        t_emp    = ui.tab("👷 Empleados")
-        t_maq    = ui.tab("🚜 Maquinaria")
+        t_leche  = ui.tab("🥛 Leite")
+        t_salud  = ui.tab("💊 Saúde")
+        t_reprod = ui.tab("🐣 Reprodução")
+        t_fin    = ui.tab("💰 Finanças")
+        t_emp    = ui.tab("👷 Funcionários")
+        t_maq    = ui.tab("🚜 Maquinário")
 
     with ui.tab_panels(tabs, value=t_leche).classes("w-full"):
 
@@ -2067,8 +2067,8 @@ def reportes_page() -> None:
             else:
                 with ui.row().classes("w-full gap-4 px-2 mt-3"):
                     with ui.card().classes("flex-1"):
-                        ui.label("Producción diaria — últimas 4 semanas").classes("font-bold mb-1")
-                        ui.label("Litros totales ordeñados cada día.").classes("help-text mb-2")
+                        ui.label("Produção diária — últimas 4 semanas").classes("font-bold mb-1")
+                        ui.label("Litros totais ordenhados por dia.").classes("help-text mb-2")
                         if not df_diaria.empty:
                             ui.echart({
                                 "tooltip": {"trigger": "axis"},
@@ -2080,8 +2080,8 @@ def reportes_page() -> None:
                             }).classes("w-full h-56")
 
                     with ui.card().classes("flex-1"):
-                        ui.label("Producción por grupo").classes("font-bold mb-1")
-                        ui.label("Litros totales acumulados por cada grupo de alimentación.").classes("help-text mb-2")
+                        ui.label("Produção por grupo").classes("font-bold mb-1")
+                        ui.label("Litros totais acumulados por grupo de alimentação.").classes("help-text mb-2")
                         if not df_grupo.empty:
                             ui.echart({
                                 "tooltip": {"trigger": "axis"},
@@ -2094,13 +2094,13 @@ def reportes_page() -> None:
 
                 with ui.row().classes("w-full gap-4 px-2 mt-2"):
                     with ui.card().classes("flex-1"):
-                        ui.label("🏆 Top 10 vacas más productivas").classes("font-bold mb-2")
+                        ui.label("🏆 Top 10 vacas mais produtivas").classes("font-bold mb-2")
                         if not df_top.empty:
                             df_top.columns = ["Vaca", "Total Litros", "Promedio por ordeñe"]
                             df_to_table(df_top, pagination=10)
 
                     with ui.card().classes("flex-1"):
-                        ui.label("📅 Resumen mensual").classes("font-bold mb-2")
+                        ui.label("📅 Resumo mensal").classes("font-bold mb-2")
                         if not df_mensual.empty:
                             df_mensual_tabla = df_mensual[["mes","litros","vacas"]].copy()
                             df_mensual_tabla.columns = ["Mes", "Litros totales", "Vacas registradas"]
@@ -2179,7 +2179,7 @@ def reportes_page() -> None:
                             }).classes("w-full h-60")
 
                 with ui.card().classes("mx-2 mt-2"):
-                    ui.label("🏥 Top 10 animales con más atenciones").classes("font-bold mb-2")
+                    ui.label("🏥 Top 10 animais com mais atendimentos").classes("font-bold mb-2")
                     if not df_vacas_s.empty:
                         df_vacas_s.columns = ["Animal", "Atenciones", "Costo Total $", "Tipos de atención"]
                         df_to_table(df_vacas_s, pagination=10)
@@ -2205,7 +2205,7 @@ def reportes_page() -> None:
                 df_tipo_fert = read_sql("""
                     SELECT tipo_fertilizacion, COUNT(*)::int AS cantidad
                     FROM tabla_reproduccion
-                    WHERE tipo_evento='Fertilización'
+                    WHERE tipo_evento='Fertilização'
                     GROUP BY tipo_fertilizacion
                 """)
                 df_prox = read_sql("""
@@ -2215,7 +2215,7 @@ def reportes_page() -> None:
                            (r.fecha_parto_esperado-CURRENT_DATE)::int  AS dias_restantes
                     FROM tabla_reproduccion r
                     JOIN tabla_vacas v ON r.vaca_id=v.vaca_id
-                    WHERE r.tipo_evento='Fertilización'
+                    WHERE r.tipo_evento='Fertilização'
                       AND r.fecha_parto_esperado >= CURRENT_DATE
                     ORDER BY r.fecha_parto_esperado LIMIT 15
                 """)
@@ -2234,14 +2234,14 @@ def reportes_page() -> None:
                     parto_v = []
                     for m in meses_r:
                         sub = df_mensual_r[df_mensual_r["mes"]==m]
-                        fr = sub[sub["tipo_evento"]=="Fertilización"]
+                        fr = sub[sub["tipo_evento"]=="Fertilização"]
                         pr = sub[sub["tipo_evento"]=="Parto"]
                         fert_v.append(int(fr["cantidad"].iloc[0]) if not fr.empty else 0)
                         parto_v.append(int(pr["cantidad"].iloc[0]) if not pr.empty else 0)
 
                 with ui.row().classes("w-full gap-4 px-2 mt-3"):
                     with ui.card().classes("flex-1"):
-                        ui.label("Fertilizaciones y partos por mes").classes("font-bold mb-1")
+                        ui.label("Fertilizações e partos por mês").classes("font-bold mb-1")
                         ui.label("Comparativa mensual de los dos eventos reproductivos principales.").classes("help-text mb-2")
                         if not df_mensual_r.empty:
                             ui.echart({
@@ -2263,8 +2263,8 @@ def reportes_page() -> None:
                             ui.label("Resultados de partos").classes("font-bold mb-1")
                             ui.label("Distribución de los tipos de resultado.").classes("help-text mb-2")
                             if not df_resultados.empty:
-                                colores = {"Exitoso": "#16a34a","Gemelar": "#3b82f6",
-                                           "Aborto": "#f59e0b","Cría muerta": "#ef4444"}
+                                colores = {"Bem-sucedido": "#16a34a","Gemelar": "#3b82f6",
+                                           "Aborto": "#f59e0b","Cria morta": "#ef4444"}
                                 ui.echart({
                                     "tooltip": {"trigger": "item", "formatter": "{b}: {c} ({d}%)"},
                                     "series": [{
@@ -2277,7 +2277,7 @@ def reportes_page() -> None:
                                 }).classes("w-full h-56")
 
                         with ui.card().classes("flex-1"):
-                            ui.label("Tipo de fertilización").classes("font-bold mb-2")
+                            ui.label("Tipo de fertilização").classes("font-bold mb-2")
                             if not df_tipo_fert.empty:
                                 ui.echart({
                                     "tooltip": {"trigger": "item", "formatter": "{b}: {c} ({d}%)"},
@@ -2292,7 +2292,7 @@ def reportes_page() -> None:
                 with ui.card().classes("mx-2 mt-2"):
                     ui.label("📅 Próximos partos esperados").classes("font-bold mb-2")
                     if not df_prox.empty:
-                        df_prox.columns = ["Animal","Fertilización","Parto Esperado","Días restantes"]
+                        df_prox.columns = ["Animal","Fertilização","Parto Esperado","Días restantes"]
                         df_to_table(df_prox, pagination=15)
                     else:
                         estado_vacio("No hay partos esperados próximamente.")
@@ -2303,27 +2303,27 @@ def reportes_page() -> None:
                 df_mensual_f = read_sql("""
                     SELECT TO_CHAR(DATE_TRUNC('month',fecha),'MM/YYYY') AS mes,
                            DATE_TRUNC('month',fecha) AS mes_ord,
-                           SUM(CASE WHEN tipo='Ingreso' THEN monto ELSE 0 END)::float AS ingresos,
-                           SUM(CASE WHEN tipo='Egreso'  THEN monto ELSE 0 END)::float AS egresos
+                           SUM(CASE WHEN tipo='Receita' THEN monto ELSE 0 END)::float AS ingresos,
+                           SUM(CASE WHEN tipo='Despesa'  THEN monto ELSE 0 END)::float AS egresos
                     FROM tabla_finanzas
                     GROUP BY DATE_TRUNC('month',fecha) ORDER BY mes_ord
                 """)
                 df_categ_f = read_sql("""
                     SELECT categoria, SUM(monto)::float AS total
-                    FROM tabla_finanzas WHERE tipo='Egreso'
+                    FROM tabla_finanzas WHERE tipo='Despesa'
                     GROUP BY categoria ORDER BY total DESC
                 """)
                 df_ing_categ = read_sql("""
                     SELECT categoria, SUM(monto)::float AS total
-                    FROM tabla_finanzas WHERE tipo='Ingreso'
+                    FROM tabla_finanzas WHERE tipo='Receita'
                     GROUP BY categoria ORDER BY total DESC
                 """)
                 df_resumen_f = read_sql("""
                     SELECT TO_CHAR(DATE_TRUNC('month',fecha),'MM/YYYY') AS mes,
                            DATE_TRUNC('month',fecha) AS mes_ord,
-                           SUM(CASE WHEN tipo='Ingreso' THEN monto ELSE 0 END)::float AS ingresos,
-                           SUM(CASE WHEN tipo='Egreso'  THEN monto ELSE 0 END)::float AS egresos,
-                           SUM(CASE WHEN tipo='Ingreso' THEN monto ELSE -monto END)::float AS balance
+                           SUM(CASE WHEN tipo='Receita' THEN monto ELSE 0 END)::float AS ingresos,
+                           SUM(CASE WHEN tipo='Despesa'  THEN monto ELSE 0 END)::float AS egresos,
+                           SUM(CASE WHEN tipo='Receita' THEN monto ELSE -monto END)::float AS balance
                     FROM tabla_finanzas
                     GROUP BY DATE_TRUNC('month',fecha) ORDER BY mes_ord
                 """)
@@ -2341,14 +2341,14 @@ def reportes_page() -> None:
                         if not df_mensual_f.empty:
                             ui.echart({
                                 "tooltip": {"trigger": "axis"},
-                                "legend": {"data": ["Ingresos","Egresos"], "bottom": 0},
+                                "legend": {"data": ["Receitas","Despesas"], "bottom": 0},
                                 "xAxis": {"type": "category", "data": list(df_mensual_f["mes"]),
                                           "axisLabel": {"rotate": 20}},
                                 "yAxis": {"type": "value", "axisLabel": {"formatter": "${value}"}},
                                 "series": [
-                                    {"name": "Ingresos", "type": "bar", "data": list(df_mensual_f["ingresos"]),
+                                    {"name": "Receitas", "type": "bar", "data": list(df_mensual_f["ingresos"]),
                                      "itemStyle": {"color": "#16a34a"}, "barMaxWidth": 40},
-                                    {"name": "Egresos",  "type": "bar", "data": list(df_mensual_f["egresos"]),
+                                    {"name": "Despesas",  "type": "bar", "data": list(df_mensual_f["egresos"]),
                                      "itemStyle": {"color": "#ef4444"}, "barMaxWidth": 40},
                                 ],
                             }).classes("w-full h-56")
@@ -2375,7 +2375,7 @@ def reportes_page() -> None:
                     with ui.card().classes("flex-1"):
                         ui.label("De dónde vino el dinero").classes("font-bold mb-2")
                         if not df_ing_categ.empty:
-                            df_ing_categ.columns = ["Categoría", "Total $"]
+                            df_ing_categ.columns = ["Categoria", "Total $"]
                             df_to_table(df_ing_categ, pagination=10)
 
                     with ui.card().classes("flex-1"):
@@ -2437,8 +2437,8 @@ def reportes_page() -> None:
                         ui.label("Pagos por tipo").classes("font-bold mb-1")
                         ui.label("Distribución entre sueldos, adelantos y bonos.").classes("help-text mb-2")
                         if not df_tipo_pago.empty:
-                            colores_p = {"Sueldo": "#8b5cf6","Adelanto": "#f59e0b",
-                                         "Bono": "#16a34a","Liquidación": "#ef4444"}
+                            colores_p = {"Salário": "#8b5cf6","Adiantamento": "#f59e0b",
+                                         "Bônus": "#16a34a","Rescisão": "#ef4444"}
                             ui.echart({
                                 "tooltip": {"trigger": "item", "formatter": "{b}: ${c} ({d}%)"},
                                 "legend": {"bottom": 0},
@@ -2498,8 +2498,8 @@ def reportes_page() -> None:
             else:
                 with ui.row().classes("w-full gap-4 px-2 mt-3"):
                     with ui.card().classes("flex-1"):
-                        ui.label("Costo de mantenimiento por máquina").classes("font-bold mb-1")
-                        ui.label("Total gastado en mantenimientos para cada equipo.").classes("help-text mb-2")
+                        ui.label("Custo de manutenção por máquina").classes("font-bold mb-1")
+                        ui.label("Total gasto em manutenções para cada equipamento.").classes("help-text mb-2")
                         if not df_costo_maq.empty:
                             df_c = df_costo_maq.dropna(subset=["costo_total"])
                             df_c = df_c[df_c["costo_total"] > 0].sort_values("costo_total")
@@ -2538,14 +2538,14 @@ def reportes_page() -> None:
 
                 with ui.row().classes("w-full gap-4 px-2 mt-2"):
                     with ui.card().classes("flex-1"):
-                        ui.label("Historial por máquina").classes("font-bold mb-2")
+                        ui.label("Histórico por máquina").classes("font-bold mb-2")
                         if not df_costo_maq.empty:
                             df_costo_maq.columns = ["Máquina","Tipo","Mantenimientos",
                                                     "Costo Total $","Último Mant.","Próximo Mant."]
                             df_to_table(df_costo_maq)
 
                     with ui.card().classes("flex-1"):
-                        ui.label("Mantenimientos por mes").classes("font-bold mb-2")
+                        ui.label("Manutenções por mês").classes("font-bold mb-2")
                         if not df_mant_mes.empty:
                             df_mant_mes_t = df_mant_mes[["mes","cantidad","costo"]].copy()
                             df_mant_mes_t.columns = ["Mes","Cantidad","Costo Total $"]
@@ -2564,7 +2564,7 @@ def ficha_vaca(vaca_id: int) -> None:
             FROM tabla_vacas WHERE vaca_id = %s
         """, params=(vaca_id,))
         if df_info.empty:
-            ui.label("Animal no encontrado.").classes("m-8 text-red font-semibold")
+            ui.label("Animal não encontrado.").classes("m-8 text-red font-semibold")
             return
         info = df_info.iloc[0]
 
@@ -2578,22 +2578,22 @@ def ficha_vaca(vaca_id: int) -> None:
         """, params=(vaca_id,))
 
         df_salud = read_sql("""
-            SELECT TO_CHAR(fecha,'DD/MM/YYYY') AS "Fecha",
+            SELECT TO_CHAR(fecha,'DD/MM/YYYY') AS "Data",
                    tipo_evento                 AS "Tipo",
-                   descripcion                 AS "Descripción",
-                   COALESCE(veterinario,'—')   AS "Veterinario",
-                   costo                       AS "Costo $"
+                   descripcion                 AS "Descrição",
+                   COALESCE(veterinario,'—')   AS "Veterinário",
+                   costo                       AS "Custo R$"
             FROM tabla_salud WHERE vaca_id = %s
             ORDER BY fecha DESC LIMIT 15
         """, params=(vaca_id,))
 
         df_reprod = read_sql("""
-            SELECT TO_CHAR(fecha_evento,'DD/MM/YYYY')       AS "Fecha",
+            SELECT TO_CHAR(fecha_evento,'DD/MM/YYYY')       AS "Data",
                    tipo_evento                               AS "Evento",
-                   COALESCE(tipo_fertilizacion,'—')         AS "Fertilización",
+                   COALESCE(tipo_fertilizacion,'—')         AS "Fertilização",
                    TO_CHAR(fecha_parto_esperado,'DD/MM/YYYY') AS "Parto esperado",
                    COALESCE(resultado_parto,'—')            AS "Resultado",
-                   COALESCE(observaciones,'—')              AS "Observaciones"
+                   COALESCE(observaciones,'—')              AS "Observações"
             FROM tabla_reproduccion WHERE vaca_id = %s
             ORDER BY fecha_evento DESC
         """, params=(vaca_id,))
@@ -2615,22 +2615,22 @@ def ficha_vaca(vaca_id: int) -> None:
 
     # Header
     with ui.row().classes("px-4 pt-4 items-center gap-4"):
-        ui.button("← Volver", on_click=lambda: ui.navigate.to("/vacas")).classes(
+        ui.button("← Voltar", on_click=lambda: ui.navigate.to("/vacas")).classes(
             "bg-grey-2 text-grey-8 font-medium px-4 py-2"
         )
         with ui.column().classes("gap-0"):
             ui.label(f"🐄 {info['nombre']}").classes("text-2xl font-bold")
             ui.label(
-                f"Grupo: {info['grupo']}  •  Estado: {info['estado']}  •  {info['dias_en_granja']} días en la granja"
+                f"Grupo: {info['grupo']}  •  Estado: {info['estado']}  •  {info['dias_en_granja']} dias na fazenda"
             ).classes("text-sm text-grey-6")
 
     # KPIs de la vaca
     with ui.row().classes("w-full gap-4 px-4 mt-4"):
         for titulo, valor, sub in [
-            ("🥛 Total producido", f"{total_litros:,.0f} L", "acumulado histórico"),
-            ("📊 Promedio/ordeñe", f"{prom_litros:.1f} L",   "por sesión de ordeñe"),
-            ("💊 Eventos de salud", str(len(df_salud)),       "registros encontrados"),
-            ("🐣 Eventos reproductivos", str(len(df_reprod)), "fertilizaciones/partos"),
+            ("🥛 Total produzido", f"{total_litros:,.0f} L", "acumulado histórico"),
+            ("📊 Média/ordenha", f"{prom_litros:.1f} L",   "por sessão de ordenha"),
+            ("💊 Eventos de saúde", str(len(df_salud)),       "registros encontrados"),
+            ("🐣 Eventos reprodutivos", str(len(df_reprod)), "fertilizações/partos"),
         ]:
             with ui.card().classes("flex-1 p-5 text-center"):
                 ui.label(titulo).classes("text-xs text-grey-5 uppercase tracking-widest")
@@ -2639,8 +2639,8 @@ def ficha_vaca(vaca_id: int) -> None:
 
     # Producción últimos 30 días
     with ui.card().classes("mx-4 mt-4"):
-        ui.label("📈 Producción — últimos 30 días").classes("font-bold mb-1")
-        ui.label("Litros por día de ordeñe.").classes("help-text mb-2")
+        ui.label("📈 Produção — últimos 30 dias").classes("font-bold mb-1")
+        ui.label("Litros por dia de ordenha.").classes("help-text mb-2")
         if not df_prod.empty:
             ui.echart({
                 "tooltip": {"trigger": "axis"},
@@ -2651,21 +2651,21 @@ def ficha_vaca(vaca_id: int) -> None:
                             "smooth": True, "areaStyle": {}, "itemStyle": {"color": "#0ea5e9"}}],
             }).classes("w-full h-56")
         else:
-            estado_vacio("Sin registros de producción en los últimos 30 días.")
+            estado_vacio("Sem registros de produção nos últimos 30 dias.")
 
     # Salud y reproducción lado a lado
     with ui.row().classes("w-full gap-4 px-4 mt-4 pb-6"):
         with ui.card().classes("flex-1"):
-            ui.label("💊 Historial Sanitario").classes("font-bold mb-2")
+            ui.label("💊 Histórico Sanitário").classes("font-bold mb-2")
             if df_salud.empty:
-                estado_vacio("Sin eventos de salud registrados.")
+                estado_vacio("Sem eventos de saúde registrados.")
             else:
                 df_to_table(df_salud, pagination=10)
 
         with ui.card().classes("flex-1"):
-            ui.label("🐣 Historial Reproductivo").classes("font-bold mb-2")
+            ui.label("🐣 Histórico Reprodutivo").classes("font-bold mb-2")
             if df_reprod.empty:
-                estado_vacio("Sin eventos reproductivos registrados.")
+                estado_vacio("Sem eventos reprodutivos registrados.")
             else:
                 df_to_table(df_reprod, pagination=10)
 
