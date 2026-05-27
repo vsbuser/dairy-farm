@@ -51,11 +51,11 @@ Activá el entorno virtual e instalá los paquetes:
 ```bash
 # Windows
 venv\Scripts\activate
-pip install nicegui pandas psycopg2-binary sqlalchemy
+pip install -r requirements.txt
 
 # Mac / Linux
 source venv/bin/activate
-pip install nicegui pandas psycopg2-binary sqlalchemy
+pip install -r requirements.txt
 ```
 
 ---
