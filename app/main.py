@@ -162,6 +162,7 @@ def nav(current: str = "/") -> None:
         ("🐣 Reproducción", "/reproduccion"),
         ("💰 Finanzas",     "/finanzas"),
         ("👷 Empleados",    "/empleados"),
+        ("📊 Reportes",     "/reportes"),
     ]
     with ui.header().classes("bg-blue-800 text-white flex items-center gap-2 px-6 py-3"):
         ui.label("🐄 Dairy Farm Pro").classes("text-xl font-bold mr-4")
@@ -1889,6 +1890,559 @@ def empleados_page() -> None:
     with ui.card().classes("mx-4 mb-4"):
         ui.label("Historial de Pagos").classes("text-lg font-bold mb-2")
         tabla_pagos()
+
+
+# ── REPORTES ─────────────────────────────────────────────────────────────────
+
+@ui.page("/reportes")
+def reportes_page() -> None:
+    nav("/reportes")
+    with ui.column().classes("px-4 pt-4 pb-2"):
+        ui.label("📊 Reportes").classes("text-2xl font-bold")
+        ui.label("Resúmenes y análisis de todas las áreas de tu granja.").classes("text-sm text-grey-6")
+
+    with ui.tabs().classes("w-full px-4 mt-2").props("dense") as tabs:
+        t_leche  = ui.tab("🥛 Leche")
+        t_salud  = ui.tab("💊 Salud")
+        t_reprod = ui.tab("🐣 Reproducción")
+        t_fin    = ui.tab("💰 Finanzas")
+        t_emp    = ui.tab("👷 Empleados")
+        t_maq    = ui.tab("🚜 Maquinaria")
+
+    with ui.tab_panels(tabs, value=t_leche).classes("w-full"):
+
+        # ── LECHE ─────────────────────────────────────────────────────────────
+        with ui.tab_panel(t_leche):
+            try:
+                # Producción diaria últimas 4 semanas
+                df_diaria = read_sql("""
+                    SELECT TO_CHAR(DATE(fecha_hora),'DD/MM') AS dia,
+                           DATE(fecha_hora)                  AS dia_ord,
+                           ROUND(SUM(litros)::numeric,1)::float AS litros
+                    FROM tabla_leche
+                    WHERE fecha_hora >= CURRENT_DATE - 28
+                    GROUP BY DATE(fecha_hora) ORDER BY dia_ord
+                """)
+                # Top 10 vacas
+                df_top = read_sql("""
+                    SELECT v.nombre,
+                           ROUND(SUM(l.litros)::numeric,1)::float AS total,
+                           ROUND(AVG(l.litros)::numeric,2)::float AS promedio
+                    FROM tabla_leche l
+                    JOIN tabla_vacas v ON l.vaca_id=v.vaca_id
+                    GROUP BY v.nombre ORDER BY total DESC LIMIT 10
+                """)
+                # Producción por grupo
+                df_grupo = read_sql("""
+                    SELECT COALESCE(v.grupo,'(sin grupo)') AS grupo,
+                           ROUND(SUM(l.litros)::numeric,0)::float AS total,
+                           COUNT(DISTINCT l.vaca_id)::int AS vacas
+                    FROM tabla_leche l
+                    JOIN tabla_vacas v ON l.vaca_id=v.vaca_id
+                    GROUP BY v.grupo ORDER BY total DESC
+                """)
+                # Resumen mensual
+                df_mensual = read_sql("""
+                    SELECT TO_CHAR(DATE_TRUNC('month',fecha_hora),'MM/YYYY') AS mes,
+                           DATE_TRUNC('month',fecha_hora) AS mes_ord,
+                           ROUND(SUM(litros)::numeric,0)::float AS litros,
+                           COUNT(DISTINCT vaca_id)::int AS vacas
+                    FROM tabla_leche
+                    GROUP BY DATE_TRUNC('month',fecha_hora)
+                    ORDER BY mes_ord
+                """)
+                err_leche = None
+            except Exception as exc:
+                err_leche = str(exc)
+
+            if err_leche:
+                ui.label(f"Error: {err_leche}").classes("text-red m-4")
+            else:
+                with ui.row().classes("w-full gap-4 px-2 mt-3"):
+                    with ui.card().classes("flex-1"):
+                        ui.label("Producción diaria — últimas 4 semanas").classes("font-bold mb-1")
+                        ui.label("Litros totales ordeñados cada día.").classes("help-text mb-2")
+                        if not df_diaria.empty:
+                            ui.echart({
+                                "tooltip": {"trigger": "axis"},
+                                "xAxis": {"type": "category", "data": list(df_diaria["dia"]),
+                                          "axisLabel": {"rotate": 30, "fontSize": 11}},
+                                "yAxis": {"type": "value", "name": "lts"},
+                                "series": [{"type": "line", "data": list(df_diaria["litros"]),
+                                            "smooth": True, "areaStyle": {}, "itemStyle": {"color": "#0ea5e9"}}],
+                            }).classes("w-full h-56")
+
+                    with ui.card().classes("flex-1"):
+                        ui.label("Producción por grupo").classes("font-bold mb-1")
+                        ui.label("Litros totales acumulados por cada grupo de alimentación.").classes("help-text mb-2")
+                        if not df_grupo.empty:
+                            ui.echart({
+                                "tooltip": {"trigger": "axis"},
+                                "xAxis": {"type": "category", "data": list(df_grupo["grupo"]),
+                                          "axisLabel": {"rotate": 20, "fontSize": 11}},
+                                "yAxis": {"type": "value"},
+                                "series": [{"type": "bar", "data": list(df_grupo["total"]),
+                                            "itemStyle": {"color": "#16a34a"}, "barMaxWidth": 50}],
+                            }).classes("w-full h-56")
+
+                with ui.row().classes("w-full gap-4 px-2 mt-2"):
+                    with ui.card().classes("flex-1"):
+                        ui.label("🏆 Top 10 vacas más productivas").classes("font-bold mb-2")
+                        if not df_top.empty:
+                            df_top.columns = ["Vaca", "Total Litros", "Promedio por ordeñe"]
+                            df_to_table(df_top, pagination=10)
+
+                    with ui.card().classes("flex-1"):
+                        ui.label("📅 Resumen mensual").classes("font-bold mb-2")
+                        if not df_mensual.empty:
+                            df_mensual_tabla = df_mensual[["mes","litros","vacas"]].copy()
+                            df_mensual_tabla.columns = ["Mes", "Litros totales", "Vacas registradas"]
+                            df_to_table(df_mensual_tabla, pagination=12)
+
+        # ── SALUD ─────────────────────────────────────────────────────────────
+        with ui.tab_panel(t_salud):
+            try:
+                df_tipos = read_sql("""
+                    SELECT tipo_evento, COUNT(*)::int AS cantidad,
+                           ROUND(SUM(costo)::numeric,0)::float AS costo_total
+                    FROM tabla_salud GROUP BY tipo_evento ORDER BY cantidad DESC
+                """)
+                df_mensual_s = read_sql("""
+                    SELECT TO_CHAR(DATE_TRUNC('month',fecha),'MM/YYYY') AS mes,
+                           DATE_TRUNC('month',fecha) AS mes_ord,
+                           COUNT(*)::int AS atenciones,
+                           ROUND(SUM(costo)::numeric,0)::float AS costo
+                    FROM tabla_salud
+                    GROUP BY DATE_TRUNC('month',fecha) ORDER BY mes_ord
+                """)
+                df_vacas_s = read_sql("""
+                    SELECT v.nombre, COUNT(*)::int AS atenciones,
+                           ROUND(SUM(s.costo)::numeric,0)::float AS costo_total,
+                           STRING_AGG(DISTINCT s.tipo_evento, ', ' ORDER BY s.tipo_evento) AS tipos
+                    FROM tabla_salud s
+                    JOIN tabla_vacas v ON s.vaca_id=v.vaca_id
+                    GROUP BY v.nombre ORDER BY atenciones DESC LIMIT 10
+                """)
+                err_salud = None
+            except Exception as exc:
+                err_salud = str(exc)
+
+            if err_salud:
+                ui.label(f"Error: {err_salud}").classes("text-red m-4")
+            else:
+                with ui.row().classes("w-full gap-4 px-2 mt-3"):
+                    with ui.card().classes("flex-1"):
+                        ui.label("Atenciones por tipo").classes("font-bold mb-1")
+                        ui.label("Cuántas veces ocurrió cada tipo de atención.").classes("help-text mb-2")
+                        if not df_tipos.empty:
+                            ui.echart({
+                                "tooltip": {"trigger": "item", "formatter": "{b}: {c} ({d}%)"},
+                                "legend": {"bottom": 0, "type": "scroll"},
+                                "series": [{
+                                    "type": "pie", "radius": ["38%", "66%"],
+                                    "center": ["50%", "42%"],
+                                    "itemStyle": {"borderRadius": 6, "borderColor": "#fff", "borderWidth": 2},
+                                    "label": {"show": False},
+                                    "emphasis": {"label": {"show": True, "fontSize": 13, "fontWeight": "bold"}},
+                                    "data": [{"value": int(r["cantidad"]), "name": r["tipo_evento"]}
+                                             for _, r in df_tipos.iterrows()],
+                                }],
+                            }).classes("w-full h-60")
+
+                    with ui.card().classes("flex-1"):
+                        ui.label("Atenciones y costos por mes").classes("font-bold mb-1")
+                        ui.label("Evolución mensual de la cantidad de intervenciones.").classes("help-text mb-2")
+                        if not df_mensual_s.empty:
+                            ui.echart({
+                                "tooltip": {"trigger": "axis"},
+                                "legend": {"data": ["Atenciones", "Costo $"], "bottom": 0},
+                                "xAxis": {"type": "category", "data": list(df_mensual_s["mes"]),
+                                          "axisLabel": {"rotate": 20, "fontSize": 11}},
+                                "yAxis": [
+                                    {"type": "value", "name": "Atenciones"},
+                                    {"type": "value", "name": "Costo $", "position": "right"},
+                                ],
+                                "series": [
+                                    {"name": "Atenciones", "type": "bar", "data": list(df_mensual_s["atenciones"]),
+                                     "itemStyle": {"color": "#6366f1"}, "barMaxWidth": 40},
+                                    {"name": "Costo $", "type": "line", "yAxisIndex": 1,
+                                     "data": list(df_mensual_s["costo"]),
+                                     "itemStyle": {"color": "#ef4444"}, "smooth": True},
+                                ],
+                            }).classes("w-full h-60")
+
+                with ui.card().classes("mx-2 mt-2"):
+                    ui.label("🏥 Top 10 animales con más atenciones").classes("font-bold mb-2")
+                    if not df_vacas_s.empty:
+                        df_vacas_s.columns = ["Animal", "Atenciones", "Costo Total $", "Tipos de atención"]
+                        df_to_table(df_vacas_s, pagination=10)
+
+        # ── REPRODUCCIÓN ──────────────────────────────────────────────────────
+        with ui.tab_panel(t_reprod):
+            try:
+                df_mensual_r = read_sql("""
+                    SELECT TO_CHAR(DATE_TRUNC('month',fecha_evento),'MM/YYYY') AS mes,
+                           DATE_TRUNC('month',fecha_evento) AS mes_ord,
+                           tipo_evento,
+                           COUNT(*)::int AS cantidad
+                    FROM tabla_reproduccion
+                    GROUP BY DATE_TRUNC('month',fecha_evento), tipo_evento
+                    ORDER BY mes_ord, tipo_evento
+                """)
+                df_resultados = read_sql("""
+                    SELECT resultado_parto, COUNT(*)::int AS cantidad
+                    FROM tabla_reproduccion
+                    WHERE tipo_evento='Parto' AND resultado_parto IS NOT NULL
+                    GROUP BY resultado_parto ORDER BY cantidad DESC
+                """)
+                df_tipo_fert = read_sql("""
+                    SELECT tipo_fertilizacion, COUNT(*)::int AS cantidad
+                    FROM tabla_reproduccion
+                    WHERE tipo_evento='Fertilización'
+                    GROUP BY tipo_fertilizacion
+                """)
+                df_prox = read_sql("""
+                    SELECT v.nombre,
+                           TO_CHAR(r.fecha_evento,'DD/MM/YYYY')       AS fertilizacion,
+                           TO_CHAR(r.fecha_parto_esperado,'DD/MM/YYYY') AS parto_esperado,
+                           (r.fecha_parto_esperado-CURRENT_DATE)::int  AS dias_restantes
+                    FROM tabla_reproduccion r
+                    JOIN tabla_vacas v ON r.vaca_id=v.vaca_id
+                    WHERE r.tipo_evento='Fertilización'
+                      AND r.fecha_parto_esperado >= CURRENT_DATE
+                    ORDER BY r.fecha_parto_esperado LIMIT 15
+                """)
+                err_reprod = None
+            except Exception as exc:
+                err_reprod = str(exc)
+
+            if err_reprod:
+                ui.label(f"Error: {err_reprod}").classes("text-red m-4")
+            else:
+                # Meses únicos ordenados
+                if not df_mensual_r.empty:
+                    meses_r = sorted(df_mensual_r["mes"].unique(),
+                                     key=lambda m: df_mensual_r.loc[df_mensual_r["mes"]==m,"mes_ord"].iloc[0])
+                    fert_v = []
+                    parto_v = []
+                    for m in meses_r:
+                        sub = df_mensual_r[df_mensual_r["mes"]==m]
+                        fr = sub[sub["tipo_evento"]=="Fertilización"]
+                        pr = sub[sub["tipo_evento"]=="Parto"]
+                        fert_v.append(int(fr["cantidad"].iloc[0]) if not fr.empty else 0)
+                        parto_v.append(int(pr["cantidad"].iloc[0]) if not pr.empty else 0)
+
+                with ui.row().classes("w-full gap-4 px-2 mt-3"):
+                    with ui.card().classes("flex-1"):
+                        ui.label("Fertilizaciones y partos por mes").classes("font-bold mb-1")
+                        ui.label("Comparativa mensual de los dos eventos reproductivos principales.").classes("help-text mb-2")
+                        if not df_mensual_r.empty:
+                            ui.echart({
+                                "tooltip": {"trigger": "axis"},
+                                "legend": {"data": ["Fertilizaciones","Partos"], "bottom": 0},
+                                "xAxis": {"type": "category", "data": meses_r,
+                                          "axisLabel": {"rotate": 20, "fontSize": 11}},
+                                "yAxis": {"type": "value"},
+                                "series": [
+                                    {"name": "Fertilizaciones", "type": "bar", "data": fert_v,
+                                     "itemStyle": {"color": "#3b82f6"}, "barMaxWidth": 35},
+                                    {"name": "Partos",          "type": "bar", "data": parto_v,
+                                     "itemStyle": {"color": "#16a34a"}, "barMaxWidth": 35},
+                                ],
+                            }).classes("w-full h-56")
+
+                    with ui.row().classes("flex-1 gap-4"):
+                        with ui.card().classes("flex-1"):
+                            ui.label("Resultados de partos").classes("font-bold mb-1")
+                            ui.label("Distribución de los tipos de resultado.").classes("help-text mb-2")
+                            if not df_resultados.empty:
+                                colores = {"Exitoso": "#16a34a","Gemelar": "#3b82f6",
+                                           "Aborto": "#f59e0b","Cría muerta": "#ef4444"}
+                                ui.echart({
+                                    "tooltip": {"trigger": "item", "formatter": "{b}: {c} ({d}%)"},
+                                    "series": [{
+                                        "type": "pie", "radius": "68%",
+                                        "label": {"formatter": "{b}\n{c}"},
+                                        "data": [{"value": int(r["cantidad"]), "name": r["resultado_parto"],
+                                                  "itemStyle": {"color": colores.get(r["resultado_parto"],"#94a3b8")}}
+                                                 for _, r in df_resultados.iterrows()],
+                                    }],
+                                }).classes("w-full h-56")
+
+                        with ui.card().classes("flex-1"):
+                            ui.label("Tipo de fertilización").classes("font-bold mb-2")
+                            if not df_tipo_fert.empty:
+                                ui.echart({
+                                    "tooltip": {"trigger": "item", "formatter": "{b}: {c} ({d}%)"},
+                                    "series": [{
+                                        "type": "pie", "radius": "68%",
+                                        "label": {"formatter": "{b}\n{c}"},
+                                        "data": [{"value": int(r["cantidad"]), "name": r["tipo_fertilizacion"]}
+                                                 for _, r in df_tipo_fert.iterrows()],
+                                    }],
+                                }).classes("w-full h-56")
+
+                with ui.card().classes("mx-2 mt-2"):
+                    ui.label("📅 Próximos partos esperados").classes("font-bold mb-2")
+                    if not df_prox.empty:
+                        df_prox.columns = ["Animal","Fertilización","Parto Esperado","Días restantes"]
+                        df_to_table(df_prox, pagination=15)
+                    else:
+                        estado_vacio("No hay partos esperados próximamente.")
+
+        # ── FINANZAS ──────────────────────────────────────────────────────────
+        with ui.tab_panel(t_fin):
+            try:
+                df_mensual_f = read_sql("""
+                    SELECT TO_CHAR(DATE_TRUNC('month',fecha),'MM/YYYY') AS mes,
+                           DATE_TRUNC('month',fecha) AS mes_ord,
+                           SUM(CASE WHEN tipo='Ingreso' THEN monto ELSE 0 END)::float AS ingresos,
+                           SUM(CASE WHEN tipo='Egreso'  THEN monto ELSE 0 END)::float AS egresos
+                    FROM tabla_finanzas
+                    GROUP BY DATE_TRUNC('month',fecha) ORDER BY mes_ord
+                """)
+                df_categ_f = read_sql("""
+                    SELECT categoria, SUM(monto)::float AS total
+                    FROM tabla_finanzas WHERE tipo='Egreso'
+                    GROUP BY categoria ORDER BY total DESC
+                """)
+                df_ing_categ = read_sql("""
+                    SELECT categoria, SUM(monto)::float AS total
+                    FROM tabla_finanzas WHERE tipo='Ingreso'
+                    GROUP BY categoria ORDER BY total DESC
+                """)
+                df_resumen_f = read_sql("""
+                    SELECT TO_CHAR(DATE_TRUNC('month',fecha),'MM/YYYY') AS mes,
+                           DATE_TRUNC('month',fecha) AS mes_ord,
+                           SUM(CASE WHEN tipo='Ingreso' THEN monto ELSE 0 END)::float AS ingresos,
+                           SUM(CASE WHEN tipo='Egreso'  THEN monto ELSE 0 END)::float AS egresos,
+                           SUM(CASE WHEN tipo='Ingreso' THEN monto ELSE -monto END)::float AS balance
+                    FROM tabla_finanzas
+                    GROUP BY DATE_TRUNC('month',fecha) ORDER BY mes_ord
+                """)
+                err_fin = None
+            except Exception as exc:
+                err_fin = str(exc)
+
+            if err_fin:
+                ui.label(f"Error: {err_fin}").classes("text-red m-4")
+            else:
+                with ui.row().classes("w-full gap-4 px-2 mt-3"):
+                    with ui.card().classes("flex-1"):
+                        ui.label("Ingresos vs egresos por mes").classes("font-bold mb-1")
+                        ui.label("Verde = entró dinero · Rojo = salió dinero").classes("help-text mb-2")
+                        if not df_mensual_f.empty:
+                            ui.echart({
+                                "tooltip": {"trigger": "axis"},
+                                "legend": {"data": ["Ingresos","Egresos"], "bottom": 0},
+                                "xAxis": {"type": "category", "data": list(df_mensual_f["mes"]),
+                                          "axisLabel": {"rotate": 20}},
+                                "yAxis": {"type": "value", "axisLabel": {"formatter": "${value}"}},
+                                "series": [
+                                    {"name": "Ingresos", "type": "bar", "data": list(df_mensual_f["ingresos"]),
+                                     "itemStyle": {"color": "#16a34a"}, "barMaxWidth": 40},
+                                    {"name": "Egresos",  "type": "bar", "data": list(df_mensual_f["egresos"]),
+                                     "itemStyle": {"color": "#ef4444"}, "barMaxWidth": 40},
+                                ],
+                            }).classes("w-full h-56")
+
+                    with ui.card().classes("flex-1"):
+                        ui.label("¿En qué se gastó el dinero?").classes("font-bold mb-1")
+                        ui.label("Distribución de egresos por categoría.").classes("help-text mb-2")
+                        if not df_categ_f.empty:
+                            ui.echart({
+                                "tooltip": {"trigger": "item", "formatter": "{b}<br/>${c} ({d}%)"},
+                                "legend": {"bottom": 0, "type": "scroll"},
+                                "series": [{
+                                    "type": "pie", "radius": ["35%","65%"],
+                                    "center": ["50%","42%"],
+                                    "itemStyle": {"borderRadius": 6, "borderColor": "#fff", "borderWidth": 2},
+                                    "label": {"show": False},
+                                    "emphasis": {"label": {"show": True, "fontSize": 12, "fontWeight": "bold"}},
+                                    "data": [{"value": float(r["total"]), "name": r["categoria"]}
+                                             for _, r in df_categ_f.iterrows()],
+                                }],
+                            }).classes("w-full h-56")
+
+                with ui.row().classes("w-full gap-4 px-2 mt-2"):
+                    with ui.card().classes("flex-1"):
+                        ui.label("De dónde vino el dinero").classes("font-bold mb-2")
+                        if not df_ing_categ.empty:
+                            df_ing_categ.columns = ["Categoría", "Total $"]
+                            df_to_table(df_ing_categ, pagination=10)
+
+                    with ui.card().classes("flex-1"):
+                        ui.label("Resumen financiero mensual").classes("font-bold mb-2")
+                        if not df_resumen_f.empty:
+                            df_r = df_resumen_f[["mes","ingresos","egresos","balance"]].copy()
+                            df_r.columns = ["Mes","Ingresos $","Egresos $","Balance $"]
+                            df_to_table(df_r, pagination=12)
+
+        # ── EMPLEADOS ─────────────────────────────────────────────────────────
+        with ui.tab_panel(t_emp):
+            try:
+                df_pagos_emp = read_sql("""
+                    SELECT e.nombre,
+                           e.cargo,
+                           e.sueldo_base::float AS sueldo_base,
+                           SUM(p.monto)::float  AS total_pagado,
+                           COUNT(p.pago_id)::int AS cantidad_pagos
+                    FROM tabla_empleados e
+                    LEFT JOIN tabla_pagos p ON e.empleado_id=p.empleado_id
+                    GROUP BY e.empleado_id, e.nombre, e.cargo, e.sueldo_base
+                    ORDER BY total_pagado DESC NULLS LAST
+                """)
+                df_tipo_pago = read_sql("""
+                    SELECT tipo, COUNT(*)::int AS cantidad,
+                           SUM(monto)::float AS total
+                    FROM tabla_pagos GROUP BY tipo ORDER BY total DESC
+                """)
+                df_nomina_mes = read_sql("""
+                    SELECT TO_CHAR(DATE_TRUNC('month',fecha),'MM/YYYY') AS mes,
+                           DATE_TRUNC('month',fecha) AS mes_ord,
+                           SUM(monto)::float AS total,
+                           COUNT(DISTINCT empleado_id)::int AS empleados
+                    FROM tabla_pagos
+                    GROUP BY DATE_TRUNC('month',fecha) ORDER BY mes_ord
+                """)
+                err_emp = None
+            except Exception as exc:
+                err_emp = str(exc)
+
+            if err_emp:
+                ui.label(f"Error: {err_emp}").classes("text-red m-4")
+            else:
+                with ui.row().classes("w-full gap-4 px-2 mt-3"):
+                    with ui.card().classes("flex-1"):
+                        ui.label("Nómina pagada por mes").classes("font-bold mb-1")
+                        ui.label("Total abonado al personal cada mes.").classes("help-text mb-2")
+                        if not df_nomina_mes.empty:
+                            ui.echart({
+                                "tooltip": {"trigger": "axis", "formatter": "{b}: ${c}"},
+                                "xAxis": {"type": "category", "data": list(df_nomina_mes["mes"]),
+                                          "axisLabel": {"rotate": 20}},
+                                "yAxis": {"type": "value", "axisLabel": {"formatter": "${value}"}},
+                                "series": [{"type": "bar", "data": list(df_nomina_mes["total"]),
+                                            "itemStyle": {"color": "#8b5cf6"}, "barMaxWidth": 50}],
+                            }).classes("w-full h-56")
+
+                    with ui.card().classes("flex-1"):
+                        ui.label("Pagos por tipo").classes("font-bold mb-1")
+                        ui.label("Distribución entre sueldos, adelantos y bonos.").classes("help-text mb-2")
+                        if not df_tipo_pago.empty:
+                            colores_p = {"Sueldo": "#8b5cf6","Adelanto": "#f59e0b",
+                                         "Bono": "#16a34a","Liquidación": "#ef4444"}
+                            ui.echart({
+                                "tooltip": {"trigger": "item", "formatter": "{b}: ${c} ({d}%)"},
+                                "legend": {"bottom": 0},
+                                "series": [{
+                                    "type": "pie", "radius": ["38%","66%"],
+                                    "center": ["50%","42%"],
+                                    "itemStyle": {"borderRadius": 6, "borderColor": "#fff", "borderWidth": 2},
+                                    "label": {"show": False},
+                                    "emphasis": {"label": {"show": True, "fontSize": 12}},
+                                    "data": [{"value": float(r["total"]), "name": r["tipo"],
+                                              "itemStyle": {"color": colores_p.get(r["tipo"],"#94a3b8")}}
+                                             for _, r in df_tipo_pago.iterrows()],
+                                }],
+                            }).classes("w-full h-56")
+
+                with ui.card().classes("mx-2 mt-2"):
+                    ui.label("Total pagado por empleado").classes("font-bold mb-2")
+                    if not df_pagos_emp.empty:
+                        df_pagos_emp.columns = ["Empleado","Cargo","Sueldo Base $","Total Pagado $","Pagos"]
+                        df_to_table(df_pagos_emp)
+
+        # ── MAQUINARIA ────────────────────────────────────────────────────────
+        with ui.tab_panel(t_maq):
+            try:
+                df_costo_maq = read_sql("""
+                    SELECT m.nombre,
+                           m.tipo,
+                           COUNT(t.manten_id)::int AS mantenimientos,
+                           ROUND(SUM(t.costo)::numeric,0)::float AS costo_total,
+                           TO_CHAR(MAX(t.fecha),'DD/MM/YYYY') AS ultimo_mant,
+                           TO_CHAR(MAX(t.proximo_mantenimiento),'DD/MM/YYYY') AS proximo_mant
+                    FROM tabla_maquinaria m
+                    LEFT JOIN tabla_mantenimiento t ON m.maquina_id=t.maquina_id
+                    GROUP BY m.maquina_id, m.nombre, m.tipo
+                    ORDER BY costo_total DESC NULLS LAST
+                """)
+                df_tipo_mant = read_sql("""
+                    SELECT tipo_mantencion, COUNT(*)::int AS cantidad,
+                           ROUND(SUM(costo)::numeric,0)::float AS costo_total
+                    FROM tabla_mantenimiento
+                    GROUP BY tipo_mantencion ORDER BY costo_total DESC
+                """)
+                df_mant_mes = read_sql("""
+                    SELECT TO_CHAR(DATE_TRUNC('month',fecha),'MM/YYYY') AS mes,
+                           DATE_TRUNC('month',fecha) AS mes_ord,
+                           COUNT(*)::int AS cantidad,
+                           ROUND(SUM(costo)::numeric,0)::float AS costo
+                    FROM tabla_mantenimiento
+                    GROUP BY DATE_TRUNC('month',fecha) ORDER BY mes_ord
+                """)
+                err_maq = None
+            except Exception as exc:
+                err_maq = str(exc)
+
+            if err_maq:
+                ui.label(f"Error: {err_maq}").classes("text-red m-4")
+            else:
+                with ui.row().classes("w-full gap-4 px-2 mt-3"):
+                    with ui.card().classes("flex-1"):
+                        ui.label("Costo de mantenimiento por máquina").classes("font-bold mb-1")
+                        ui.label("Total gastado en mantenimientos para cada equipo.").classes("help-text mb-2")
+                        if not df_costo_maq.empty:
+                            df_c = df_costo_maq.dropna(subset=["costo_total"])
+                            df_c = df_c[df_c["costo_total"] > 0].sort_values("costo_total")
+                            if not df_c.empty:
+                                h = max(220, len(df_c) * 44)
+                                ui.echart({
+                                    "tooltip": {"trigger": "axis", "formatter": "{b}: ${c}"},
+                                    "grid": {"left": "24%","right": "12%","top": "3%","bottom": "3%"},
+                                    "xAxis": {"type": "value", "axisLabel": {"formatter": "${value}"}},
+                                    "yAxis": {"type": "category", "data": list(df_c["nombre"]),
+                                              "axisLabel": {"fontSize": 12}},
+                                    "series": [{"type": "bar", "barMaxWidth": 32,
+                                                "data": list(df_c["costo_total"]),
+                                                "itemStyle": {"color": "#f59e0b"},
+                                                "label": {"show": True, "position": "right",
+                                                          "formatter": "${c}", "fontSize": 11}}],
+                                }).classes("w-full").style(f"height:{h}px;min-height:220px")
+
+                    with ui.card().classes("flex-1"):
+                        ui.label("Mantenimientos por tipo").classes("font-bold mb-1")
+                        ui.label("Qué tipo de mantenimiento se realiza más.").classes("help-text mb-2")
+                        if not df_tipo_mant.empty:
+                            ui.echart({
+                                "tooltip": {"trigger": "item", "formatter": "{b}: {c} ({d}%)"},
+                                "legend": {"bottom": 0, "type": "scroll"},
+                                "series": [{
+                                    "type": "pie", "radius": ["38%","66%"],
+                                    "center": ["50%","42%"],
+                                    "itemStyle": {"borderRadius": 6, "borderColor": "#fff", "borderWidth": 2},
+                                    "label": {"show": False},
+                                    "emphasis": {"label": {"show": True, "fontSize": 12}},
+                                    "data": [{"value": int(r["cantidad"]), "name": r["tipo_mantencion"]}
+                                             for _, r in df_tipo_mant.iterrows()],
+                                }],
+                            }).classes("w-full h-56")
+
+                with ui.row().classes("w-full gap-4 px-2 mt-2"):
+                    with ui.card().classes("flex-1"):
+                        ui.label("Historial por máquina").classes("font-bold mb-2")
+                        if not df_costo_maq.empty:
+                            df_costo_maq.columns = ["Máquina","Tipo","Mantenimientos",
+                                                    "Costo Total $","Último Mant.","Próximo Mant."]
+                            df_to_table(df_costo_maq)
+
+                    with ui.card().classes("flex-1"):
+                        ui.label("Mantenimientos por mes").classes("font-bold mb-2")
+                        if not df_mant_mes.empty:
+                            df_mant_mes_t = df_mant_mes[["mes","cantidad","costo"]].copy()
+                            df_mant_mes_t.columns = ["Mes","Cantidad","Costo Total $"]
+                            df_to_table(df_mant_mes_t, pagination=12)
 
 
 ui.run(title="Dairy Farm Pro", port=8080, reload=False)
