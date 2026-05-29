@@ -3042,22 +3042,23 @@ def reportes_page() -> None:
                             desp_b = float(ov_f["desp_anterior"].sum())
                             d_rec,  c_rec  = _fmt(_pct(rec_a,  rec_b))
                             d_desp, c_desp = _fmt(_pct(desp_a, desp_b), lower_is_better=True)
-                            for titulo, txt, color, sub in [
-                                ("Receitas",  d_rec,  c_rec,
-                                 f"R$ {int(rec_a):,}  vs  R$ {int(rec_b):,}"),
-                                ("Despesas",  d_desp, c_desp,
-                                 f"R$ {int(desp_a):,}  vs  R$ {int(desp_b):,}"),
-                            ]:
-                                with ui.card().classes("flex-1 min-w-52 p-4 text-center"):
-                                    ui.label(titulo).classes("text-xs text-grey-5 uppercase tracking-widest mb-1")
-                                    ui.label(txt).classes(f"text-2xl font-bold {color}")
-                                    ui.label(sub).classes("text-xs text-grey-5 mt-1")
-                                    ui.label(f"{n_ov_f} meses comparáveis").classes("text-xs text-grey-4 mt-1")
+                            with ui.card().classes("flex-1 min-w-52 p-4 text-center"):
+                                ui.label("Finanças").classes("text-xs text-grey-5 uppercase tracking-widest mb-2")
+                                with ui.row().classes("justify-center gap-6 w-full"):
+                                    with ui.column().classes("items-center gap-0"):
+                                        ui.label("receitas").classes("text-xs text-grey-4 uppercase")
+                                        ui.label(d_rec).classes(f"text-xl font-bold {c_rec}")
+                                        ui.label(f"R$ {int(rec_a):,}  vs  R$ {int(rec_b):,}").classes("text-xs text-grey-5")
+                                    with ui.column().classes("items-center gap-0"):
+                                        ui.label("despesas").classes("text-xs text-grey-4 uppercase")
+                                        ui.label(d_desp).classes(f"text-xl font-bold {c_desp}")
+                                        ui.label(f"R$ {int(desp_a):,}  vs  R$ {int(desp_b):,}").classes("text-xs text-grey-5")
+                                ui.label(f"{n_ov_f} meses comparáveis").classes("text-xs text-grey-4 mt-2")
                         else:
-                            with ui.card().classes("flex-2 min-w-64 p-4 text-center bg-grey-1"):
-                                ui.label("Receitas e Despesas").classes("text-xs text-grey-5 uppercase tracking-widest mb-1")
+                            with ui.card().classes("flex-1 min-w-64 p-4 text-center bg-grey-1"):
+                                ui.label("Finanças").classes("text-xs text-grey-5 uppercase tracking-widest mb-1")
                                 ui.label("Sem meses comparáveis ainda").classes("text-base text-grey-5 font-medium")
-                                ui.label(f"Dados financeiros de {ano_b} e {ano_a} não se sobrepõem em nenhum mês.").classes("text-xs text-grey-4 mt-1")
+                                ui.label(f"Dados de {ano_b} e {ano_a} não se sobrepõem.").classes("text-xs text-grey-4 mt-1")
 
                     meses_l = list(df_yoy_leite["mes_nome"])
                     meses_f = list(df_yoy_fin["mes_nome"])
