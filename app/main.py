@@ -3097,9 +3097,28 @@ def reportes_page() -> None:
                                     ],
                                 }).classes("w-full h-64")
 
-                    # linha 2: finanças
+                    # linha 2: custo diesel + finanças
                     with ui.row().classes("w-full gap-4 px-2 mt-2 pb-6"):
-                        with ui.card().classes("w-full"):
+                        if meses_d:
+                            with ui.card().classes("flex-1"):
+                                ui.label(f"Custo de diesel — {ano_b} vs {ano_a}").classes("font-bold mb-1")
+                                ui.label("Gasto total em R$ por mês em cada ano.").classes("help-text mb-2")
+                                ui.echart({
+                                    "tooltip": {"trigger": "axis", "formatter": "R$ {c}"},
+                                    "legend": {"data": [str(ano_b), str(ano_a)], "bottom": 0},
+                                    "xAxis": {"type": "category", "data": meses_d},
+                                    "yAxis": {"type": "value", "name": "R$"},
+                                    "series": [
+                                        {"name": str(ano_b), "type": "bar",
+                                         "data": list(df_yoy_diesel["custo_anterior"]),
+                                         "itemStyle": {"color": "#94a3b8"}, "barMaxWidth": 35},
+                                        {"name": str(ano_a), "type": "bar",
+                                         "data": list(df_yoy_diesel["custo_atual"]),
+                                         "itemStyle": {"color": "#f59e0b"}, "barMaxWidth": 35},
+                                    ],
+                                }).classes("w-full h-64")
+
+                        with ui.card().classes("flex-1"):
                             ui.label(f"Receitas e despesas — {ano_b} vs {ano_a}").classes("font-bold mb-1")
                             ui.label(f"Linha sólida = {ano_a} · Tracejada = {ano_b}.").classes("help-text mb-2")
                             ui.echart({
