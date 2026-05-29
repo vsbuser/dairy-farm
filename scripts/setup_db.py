@@ -44,6 +44,25 @@ COMMANDS = [
         litros      NUMERIC(5,2) NOT NULL,
         fecha_hora  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )""",
+    """CREATE TABLE IF NOT EXISTS tabla_diesel (
+        id             SERIAL PRIMARY KEY,
+        fecha          DATE NOT NULL,
+        consumo_litros NUMERIC(8,1) NOT NULL,
+        estoque_litros NUMERIC(8,1),
+        compra_litros  NUMERIC(8,1),
+        precio_rl      NUMERIC(6,2),
+        total_rs       NUMERIC(10,2)
+    )""",
+    """CREATE TABLE IF NOT EXISTS tabla_produccion_historica (
+        id                SERIAL PRIMARY KEY,
+        fecha             DATE UNIQUE NOT NULL,
+        ordenha_1         NUMERIC(8,2),
+        ordenha_2         NUMERIC(8,2),
+        ordenha_3         NUMERIC(8,2),
+        total_litros      NUMERIC(8,2) NOT NULL,
+        num_vacas         INTEGER,
+        media_litros_vaca NUMERIC(6,2)
+    )""",
     """CREATE TABLE IF NOT EXISTS tabla_salud (
         registro_id SERIAL PRIMARY KEY,
         vaca_id     INTEGER REFERENCES tabla_vacas(vaca_id),

@@ -254,7 +254,7 @@ def dashboard() -> None:
     except Exception as exc:
         total_vacas = total_dietas = vacas_tratamiento = 0
         litros_hoy = litros_ayer = litros_por_vaca = balance_mes = 0.0
-        df_stock = df_prod = df_categorias = pd.DataFrame()
+        df_stock = df_prod = df_categorias = df_hist_dash = pd.DataFrame()
         stock_critico = partos_inminentes = maquinaria_vencida = pd.DataFrame()
         error_msg = str(exc)
 
@@ -418,6 +418,7 @@ def dashboard() -> None:
                 }).classes("w-full h-64")
             else:
                 estado_vacio("Sem grupos cadastrados ainda.", "Vá a Vacas para adicionar animais.")
+
 
 
 # ── VACAS ─────────────────────────────────────────────────────────────────────
@@ -733,6 +734,130 @@ def leche_page() -> None:
         ui.label("Últimos Registros de Ordeñe").classes("text-lg font-bold mb-2")
         tabla_leche()
 
+    # ── Registro de produção diária ───────────────────────────────────────────
+    ui.separator().classes("mx-4 my-2")
+    with ui.column().classes("px-4 pt-2 pb-1"):
+        ui.label("📋 Produção Diária do Rebanho").classes("text-xl font-bold")
+        ui.label("Registre o total de litros por sessão de ordenha de todo o rebanho.").classes("text-sm text-grey-6")
+
+    @ui.refreshable
+    def tabla_produccion_diaria() -> None:
+        try:
+            df = read_sql("""
+                SELECT TO_CHAR(fecha,'DD/MM/YYYY')                    AS "Data",
+                       COALESCE(ordenha_1::text, '—')                 AS "Ordenha 1 (L)",
+                       COALESCE(ordenha_2::text, '—')                 AS "Ordenha 2 (L)",
+                       COALESCE(ordenha_3::text, '—')                 AS "Ordenha 3 (L)",
+                       total_litros                                   AS "Total (L)",
+                       COALESCE(num_vacas::text, '—')                 AS "Vacas",
+                       COALESCE(ROUND(media_litros_vaca,2)::text,'—') AS "L/Vaca"
+                FROM tabla_produccion_historica
+                ORDER BY fecha DESC LIMIT 60
+            """)
+            df_to_table(df, pagination=15)
+        except Exception as exc:
+            ui.label("Error ao carregar registros.").classes("text-red")
+
+    with ui.card().classes("mx-4 mb-4"):
+        ui.label("➕ Registrar Ordenha do Dia").classes("text-lg font-bold mb-1")
+        ui.label(
+            "Se já existe um registro para a data escolhida, ele será atualizado."
+        ).classes("help-text mb-3")
+        aviso_requeridos()
+
+        with ui.row().classes("gap-5 items-end flex-wrap mt-3"):
+            with ui.column().classes("gap-1"):
+                campo("Data", "Dia da ordenha.", required=True)
+                p_fecha = ui.date().classes("w-44")
+
+            with ui.column().classes("gap-1"):
+                campo("Ordenha 1 (L)", "Ex: manha.")
+                p_ord1 = ui.number(label="", value=None, min=0, step=0.5,
+                                   placeholder="0").classes("w-36")
+
+            with ui.column().classes("gap-1"):
+                campo("Ordenha 2 (L)", "Ex: tarde.")
+                p_ord2 = ui.number(label="", value=None, min=0, step=0.5,
+                                   placeholder="0").classes("w-36")
+
+            with ui.column().classes("gap-1"):
+                campo("Ordenha 3 (L)", "Ex: noite.")
+                p_ord3 = ui.number(label="", value=None, min=0, step=0.5,
+                                   placeholder="0").classes("w-36")
+
+            with ui.column().classes("gap-1"):
+                campo("Total (L)", "Deixe 0 para calcular automaticamente.", required=True)
+                p_total = ui.number(label="", value=0.0, min=0, step=0.5).classes("w-36")
+
+            with ui.column().classes("gap-1"):
+                campo("N° Vacas", "Opcional.")
+                p_vacas = ui.number(label="", value=None, min=0, step=1,
+                                    placeholder="—").classes("w-28")
+
+        def _val(field):
+            v = field.value
+            try:
+                return float(v) if v is not None and float(v) > 0 else None
+            except (TypeError, ValueError):
+                return None
+
+        def _auto_total() -> None:
+            parts = [_val(p_ord1), _val(p_ord2), _val(p_ord3)]
+            filled = [v for v in parts if v is not None]
+            if filled:
+                p_total.value = round(sum(filled), 2)
+
+        p_ord1.on("update:model-value", lambda _: _auto_total())
+        p_ord2.on("update:model-value", lambda _: _auto_total())
+        p_ord3.on("update:model-value", lambda _: _auto_total())
+
+        def guardar_produccion() -> None:
+            if not p_fecha.value:
+                notificar_aviso("Selecione a data da ordenha.")
+                return
+            total = _val(p_total) or (
+                sum(v for v in [_val(p_ord1), _val(p_ord2), _val(p_ord3)] if v) or None
+            )
+            if not total:
+                notificar_aviso("Informe pelo menos o total de litros ou uma das sessions.")
+                return
+            num_vacas = _val(p_vacas)
+            media = round(total / num_vacas, 2) if num_vacas else None
+            try:
+                conn = conectar(); cur = conn.cursor()
+                cur.execute("""
+                    INSERT INTO tabla_produccion_historica
+                        (fecha, ordenha_1, ordenha_2, ordenha_3,
+                         total_litros, num_vacas, media_litros_vaca)
+                    VALUES (%s,%s,%s,%s,%s,%s,%s)
+                    ON CONFLICT (fecha) DO UPDATE SET
+                        ordenha_1         = EXCLUDED.ordenha_1,
+                        ordenha_2         = EXCLUDED.ordenha_2,
+                        ordenha_3         = EXCLUDED.ordenha_3,
+                        total_litros      = EXCLUDED.total_litros,
+                        num_vacas         = EXCLUDED.num_vacas,
+                        media_litros_vaca = EXCLUDED.media_litros_vaca
+                """, (
+                    p_fecha.value,
+                    _val(p_ord1), _val(p_ord2), _val(p_ord3),
+                    total, num_vacas, media,
+                ))
+                conn.commit(); cur.close(); conn.close()
+                notificar_ok(f"Produção de {total:.1f} L registrada para {p_fecha.value}.")
+                p_ord1.value = p_ord2.value = p_ord3.value = None
+                p_total.value = 0.0; p_vacas.value = None
+                tabla_produccion_diaria.refresh()
+            except Exception as exc:
+                notificar_error(exc)
+
+        ui.button("💾  Salvar Produção", on_click=guardar_produccion).classes(
+            "mt-3 bg-blue-700 text-white font-bold px-8 py-3 text-base"
+        )
+
+    with ui.card().classes("mx-4 mb-4"):
+        ui.label("Registros Recentes de Produção Diária").classes("text-lg font-bold mb-2")
+        tabla_produccion_diaria()
+
 
 # ── DIETAS ───────────────────────────────────────────────────────────────────
 
@@ -1036,6 +1161,161 @@ def bodega_page() -> None:
 
             ui.button("➕  Agregar Stock", on_click=guardar_insumo).classes(
                 "bg-green-600 text-white font-bold px-8 py-3 text-base"
+            )
+
+    # ── Sección Diesel ────────────────────────────────────────────────────────
+    ui.separator().classes("mx-4 my-4")
+    with ui.row().classes("w-full px-4 mb-2 items-center"):
+        ui.label("⛽ Combustível — Diesel").classes("text-xl font-bold")
+
+    @ui.refreshable
+    def contenido_diesel() -> None:
+        try:
+            df_d = read_sql("""
+                SELECT fecha, consumo_litros, estoque_litros,
+                       compra_litros, precio_rl, total_rs
+                FROM tabla_diesel ORDER BY fecha
+            """)
+            df_mes = read_sql("""
+                SELECT TO_CHAR(DATE_TRUNC('month',fecha),'MM/YYYY') AS mes,
+                       DATE_TRUNC('month',fecha)                    AS mes_ord,
+                       SUM(consumo_litros)::float                   AS consumo,
+                       SUM(compra_litros)::float                    AS compra,
+                       ROUND(SUM(total_rs)::numeric,2)::float       AS gasto
+                FROM tabla_diesel
+                GROUP BY DATE_TRUNC('month',fecha)
+                ORDER BY mes_ord
+            """)
+        except Exception as exc:
+            ui.label(f"Error cargando diesel: {exc}").classes("text-red m-4")
+            return
+
+        # KPI cards
+        estoque_actual = float(df_d["estoque_litros"].dropna().iloc[-1]) if not df_d.empty else 0
+        consumo_total  = float(df_d["consumo_litros"].sum()) if not df_d.empty else 0
+        gasto_total    = float(df_d["total_rs"].dropna().sum()) if not df_d.empty else 0
+        preco_medio    = float(df_d["precio_rl"].dropna().mean()) if not df_d.empty else 0
+        ultimo_preco   = float(df_d["precio_rl"].dropna().iloc[-1]) if not df_d.empty else 0
+
+        with ui.row().classes("w-full gap-3 px-4 mb-4"):
+            for titulo, valor, sub in [
+                ("⛽ Estoque Atual",   f"{estoque_actual:,.0f} L",  "litros disponíveis"),
+                ("🔥 Consumo Total",  f"{consumo_total:,.0f} L",   f"{len(df_d)} abastecimentos"),
+                ("💰 Gasto Total",    f"R$ {gasto_total:,.2f}",    "histórico completo"),
+                ("💲 Último Preço",   f"R$ {ultimo_preco:.2f}/L",  f"média R$ {preco_medio:.2f}/L"),
+            ]:
+                with ui.card().classes("flex-1 p-5 text-center"):
+                    ui.label(titulo).classes("text-xs text-grey-5 uppercase tracking-widest")
+                    ui.label(valor).classes("text-2xl font-bold text-blue-800 mt-1")
+                    ui.label(sub).classes("text-xs text-grey-5 mt-1")
+
+        # Gráficos
+        with ui.row().classes("w-full gap-4 px-4 mb-4"):
+            with ui.card().classes("flex-1"):
+                ui.label("Consumo e compra por mês (L)").classes("font-bold mb-1")
+                ui.label("Quanto foi consumido e comprado a cada mês.").classes("help-text mb-2")
+                if not df_mes.empty:
+                    consumo_vals = [v if v else 0 for v in df_mes["consumo"].tolist()]
+                    compra_vals  = [v if v else 0 for v in df_mes["compra"].tolist()]
+                    ui.echart({
+                        "tooltip": {"trigger": "axis"},
+                        "legend": {"bottom": 0},
+                        "xAxis": {"type": "category", "data": list(df_mes["mes"]),
+                                  "axisLabel": {"rotate": 35, "fontSize": 10}},
+                        "yAxis": {"type": "value", "name": "Litros"},
+                        "series": [
+                            {"name": "Consumo (L)", "type": "bar", "data": consumo_vals,
+                             "itemStyle": {"color": "#ef4444"}, "barMaxWidth": 30},
+                            {"name": "Compra (L)",  "type": "bar", "data": compra_vals,
+                             "itemStyle": {"color": "#3b82f6"}, "barMaxWidth": 30},
+                        ],
+                    }).classes("w-full h-56")
+
+            with ui.card().classes("flex-1"):
+                ui.label("Evolução do preço R$/L").classes("font-bold mb-1")
+                ui.label("Como o preço do diesel variou ao longo do tempo.").classes("help-text mb-2")
+                df_preco = df_d[df_d["precio_rl"].notna()].copy()
+                if not df_preco.empty:
+                    ui.echart({
+                        "tooltip": {"trigger": "axis", "formatter": "{b}: R$ {c}/L"},
+                        "xAxis": {"type": "category",
+                                  "data": [str(d) for d in df_preco["fecha"]],
+                                  "axisLabel": {"rotate": 35, "fontSize": 9}},
+                        "yAxis": {"type": "value", "name": "R$/L",
+                                  "axisLabel": {"formatter": "R${value}"}},
+                        "series": [{
+                            "type": "line", "data": list(df_preco["precio_rl"].astype(float)),
+                            "smooth": True, "symbol": "circle", "symbolSize": 5,
+                            "itemStyle": {"color": "#f59e0b"},
+                            "areaStyle": {"opacity": 0.15},
+                        }],
+                    }).classes("w-full h-56")
+
+        # Tabla histórica
+        with ui.card().classes("mx-4 mb-4"):
+            ui.label("📋 Histórico de Abastecimentos").classes("font-bold mb-2")
+            df_tabla = df_d.copy()
+            df_tabla["fecha"] = df_tabla["fecha"].astype(str)
+            df_tabla.columns = ["Data", "Consumo (L)", "Estoque (L)",
+                                 "Compra (L)", "Preço R$/L", "Total R$"]
+            df_to_table(df_tabla, pagination=20)
+
+    contenido_diesel()
+
+    # Formulario para registrar nuevo abastecimiento
+    with ui.card().classes("mx-4 mb-6"):
+        ui.label("⛽ Registrar Abastecimento").classes("text-lg font-bold mb-1")
+        ui.label("Registre cada vez que consumiu ou comprou diesel.").classes("help-text mb-4")
+        aviso_requeridos()
+        with ui.row().classes("gap-4 items-end flex-wrap mt-3"):
+            with ui.column().classes("gap-1"):
+                campo("Data", "", required=True)
+                d_fecha = ui.date().classes("w-40")
+            with ui.column().classes("gap-1"):
+                campo("Consumo (L)", "Litros utilizados.", required=True)
+                d_consumo = ui.number(value=0, min=0, step=50).classes("w-36")
+            with ui.column().classes("gap-1"):
+                campo("Estoque restante (L)", "Litros que ficaram no tanque.")
+                d_estoque = ui.number(value=0, min=0, step=50).classes("w-36")
+            with ui.column().classes("gap-1"):
+                campo("Compra (L)", "Litros comprados nesta data.")
+                d_compra = ui.number(value=0, min=0, step=50).classes("w-36")
+            with ui.column().classes("gap-1"):
+                campo("Preço R$/L", "Valor pago por litro.")
+                d_precio = ui.number(value=0.0, min=0, step=0.01).classes("w-36")
+
+            def guardar_diesel() -> None:
+                if not d_fecha.value:
+                    notificar_aviso("Selecione a data do abastecimento.")
+                    return
+                if (d_consumo.value or 0) <= 0:
+                    notificar_aviso("O consumo deve ser maior que 0.")
+                    return
+                try:
+                    conn = conectar(); cur = conn.cursor()
+                    total = round((d_compra.value or 0) * (d_precio.value or 0), 2) or None
+                    cur.execute("""
+                        INSERT INTO tabla_diesel
+                            (fecha, consumo_litros, estoque_litros, compra_litros, precio_rl, total_rs)
+                        VALUES (%s,%s,%s,%s,%s,%s)
+                    """, (
+                        d_fecha.value,
+                        d_consumo.value,
+                        d_estoque.value or None,
+                        d_compra.value or None,
+                        d_precio.value or None,
+                        total,
+                    ))
+                    conn.commit(); cur.close(); conn.close()
+                    notificar_ok(f"Abastecimento registrado: {d_consumo.value} L consumidos.")
+                    d_consumo.value = 0; d_estoque.value = 0
+                    d_compra.value = 0; d_precio.value = 0.0
+                    contenido_diesel.refresh()
+                except Exception as exc:
+                    notificar_error(exc)
+
+            ui.button("💾  Guardar", on_click=guardar_diesel).classes(
+                "bg-orange-600 text-white font-bold px-8 py-3 text-base"
             )
 
 
@@ -2015,21 +2295,13 @@ def reportes_page() -> None:
         t_fin    = ui.tab("💰 Finanças")
         t_emp    = ui.tab("👷 Funcionários")
         t_maq    = ui.tab("🚜 Maquinário")
+        t_hist   = ui.tab("📈 Histórico")
 
     with ui.tab_panels(tabs, value=t_leche).classes("w-full"):
 
         # ── LECHE ─────────────────────────────────────────────────────────────
         with ui.tab_panel(t_leche):
             try:
-                # Producción diaria últimas 4 semanas
-                df_diaria = read_sql("""
-                    SELECT TO_CHAR(DATE(fecha_hora),'DD/MM') AS dia,
-                           DATE(fecha_hora)                  AS dia_ord,
-                           ROUND(SUM(litros)::numeric,1)::float AS litros
-                    FROM tabla_leche
-                    WHERE fecha_hora >= CURRENT_DATE - 28
-                    GROUP BY DATE(fecha_hora) ORDER BY dia_ord
-                """)
                 # Top 10 vacas
                 df_top = read_sql("""
                     SELECT v.nombre,
@@ -2067,19 +2339,6 @@ def reportes_page() -> None:
             else:
                 with ui.row().classes("w-full gap-4 px-2 mt-3"):
                     with ui.card().classes("flex-1"):
-                        ui.label("Produção diária — últimas 4 semanas").classes("font-bold mb-1")
-                        ui.label("Litros totais ordenhados por dia.").classes("help-text mb-2")
-                        if not df_diaria.empty:
-                            ui.echart({
-                                "tooltip": {"trigger": "axis"},
-                                "xAxis": {"type": "category", "data": list(df_diaria["dia"]),
-                                          "axisLabel": {"rotate": 30, "fontSize": 11}},
-                                "yAxis": {"type": "value", "name": "lts"},
-                                "series": [{"type": "line", "data": list(df_diaria["litros"]),
-                                            "smooth": True, "areaStyle": {}, "itemStyle": {"color": "#0ea5e9"}}],
-                            }).classes("w-full h-56")
-
-                    with ui.card().classes("flex-1"):
                         ui.label("Produção por grupo").classes("font-bold mb-1")
                         ui.label("Litros totais acumulados por grupo de alimentação.").classes("help-text mb-2")
                         if not df_grupo.empty:
@@ -2091,6 +2350,11 @@ def reportes_page() -> None:
                                 "series": [{"type": "bar", "data": list(df_grupo["total"]),
                                             "itemStyle": {"color": "#16a34a"}, "barMaxWidth": 50}],
                             }).classes("w-full h-56")
+                    with ui.card().classes("flex-none w-64 flex flex-col justify-center items-center p-6 bg-blue-50"):
+                        ui.icon("show_chart", size="xl").classes("text-blue-400 mb-2")
+                        ui.label("Histórico diário completo").classes("font-bold text-blue-700 text-center")
+                        ui.label("Gráfico com zoom e slider de datas disponível no tab Histórico.").classes("text-xs text-grey-6 text-center mt-1")
+                        ui.link("Ver Histórico →", "#").on("click", lambda: None).classes("text-sm text-blue-500 mt-3 font-medium")
 
                 with ui.row().classes("w-full gap-4 px-2 mt-2"):
                     with ui.card().classes("flex-1"):
@@ -2300,19 +2564,6 @@ def reportes_page() -> None:
         # ── FINANZAS ──────────────────────────────────────────────────────────
         with ui.tab_panel(t_fin):
             try:
-                df_mensual_f = read_sql("""
-                    SELECT TO_CHAR(DATE_TRUNC('month',fecha),'MM/YYYY') AS mes,
-                           DATE_TRUNC('month',fecha) AS mes_ord,
-                           SUM(CASE WHEN tipo='Receita' THEN monto ELSE 0 END)::float AS ingresos,
-                           SUM(CASE WHEN tipo='Despesa'  THEN monto ELSE 0 END)::float AS egresos
-                    FROM tabla_finanzas
-                    GROUP BY DATE_TRUNC('month',fecha) ORDER BY mes_ord
-                """)
-                df_categ_f = read_sql("""
-                    SELECT categoria, SUM(monto)::float AS total
-                    FROM tabla_finanzas WHERE tipo='Despesa'
-                    GROUP BY categoria ORDER BY total DESC
-                """)
                 df_ing_categ = read_sql("""
                     SELECT categoria, SUM(monto)::float AS total
                     FROM tabla_finanzas WHERE tipo='Receita'
@@ -2334,42 +2585,14 @@ def reportes_page() -> None:
             if err_fin:
                 ui.label(f"Error: {err_fin}").classes("text-red m-4")
             else:
-                with ui.row().classes("w-full gap-4 px-2 mt-3"):
-                    with ui.card().classes("flex-1"):
-                        ui.label("Ingresos vs egresos por mes").classes("font-bold mb-1")
-                        ui.label("Verde = entró dinero · Rojo = salió dinero").classes("help-text mb-2")
-                        if not df_mensual_f.empty:
-                            ui.echart({
-                                "tooltip": {"trigger": "axis"},
-                                "legend": {"data": ["Receitas","Despesas"], "bottom": 0},
-                                "xAxis": {"type": "category", "data": list(df_mensual_f["mes"]),
-                                          "axisLabel": {"rotate": 20}},
-                                "yAxis": {"type": "value", "axisLabel": {"formatter": "${value}"}},
-                                "series": [
-                                    {"name": "Receitas", "type": "bar", "data": list(df_mensual_f["ingresos"]),
-                                     "itemStyle": {"color": "#16a34a"}, "barMaxWidth": 40},
-                                    {"name": "Despesas",  "type": "bar", "data": list(df_mensual_f["egresos"]),
-                                     "itemStyle": {"color": "#ef4444"}, "barMaxWidth": 40},
-                                ],
-                            }).classes("w-full h-56")
-
-                    with ui.card().classes("flex-1"):
-                        ui.label("Em que foi gasto o dinheiro?").classes("font-bold mb-1")
-                        ui.label("Distribución de egresos por categoría.").classes("help-text mb-2")
-                        if not df_categ_f.empty:
-                            ui.echart({
-                                "tooltip": {"trigger": "item", "formatter": "{b}<br/>${c} ({d}%)"},
-                                "legend": {"bottom": 0, "type": "scroll"},
-                                "series": [{
-                                    "type": "pie", "radius": ["35%","65%"],
-                                    "center": ["50%","42%"],
-                                    "itemStyle": {"borderRadius": 6, "borderColor": "#fff", "borderWidth": 2},
-                                    "label": {"show": False},
-                                    "emphasis": {"label": {"show": True, "fontSize": 12, "fontWeight": "bold"}},
-                                    "data": [{"value": float(r["total"]), "name": r["categoria"]}
-                                             for _, r in df_categ_f.iterrows()],
-                                }],
-                            }).classes("w-full h-56")
+                with ui.row().classes("w-full px-2 mt-3 mb-1"):
+                    with ui.card().classes("w-full flex flex-row items-center gap-4 p-4 bg-amber-50"):
+                        ui.icon("bar_chart", size="md").classes("text-amber-500")
+                        with ui.column().classes("gap-0"):
+                            ui.label("Gráficos de receitas e despesas disponíveis em Finanças").classes("font-medium text-amber-800")
+                            ui.label("Barras mensais e distribuição por categoria estão na página principal de Finanças para evitar duplicação.").classes("text-xs text-grey-6")
+                        ui.space()
+                        ui.link("Ir para Finanças →", "/finanzas").classes("text-sm text-blue-500 font-medium whitespace-nowrap")
 
                 with ui.row().classes("w-full gap-4 px-2 mt-2"):
                     with ui.card().classes("flex-1"):
@@ -2550,6 +2773,368 @@ def reportes_page() -> None:
                             df_mant_mes_t = df_mant_mes[["mes","cantidad","costo"]].copy()
                             df_mant_mes_t.columns = ["Mes","Cantidad","Costo Total $"]
                             df_to_table(df_mant_mes_t, pagination=12)
+
+        # ── HISTÓRICO DE PRODUCCIÓN ───────────────────────────────────────────
+        with ui.tab_panel(t_hist):
+            try:
+                df_hist_mes = read_sql("""
+                    SELECT TO_CHAR(DATE_TRUNC('month',fecha),'MM/YYYY')     AS mes,
+                           DATE_TRUNC('month',fecha)                        AS mes_ord,
+                           ROUND(SUM(total_litros)::numeric,0)::float       AS total,
+                           ROUND(AVG(total_litros)::numeric,1)::float       AS media_diaria,
+                           ROUND(AVG(media_litros_vaca)::numeric,2)::float  AS media_vaca,
+                           ROUND(SUM(ordenha_1)::numeric,0)::float          AS ord1,
+                           ROUND(SUM(ordenha_2)::numeric,0)::float          AS ord2,
+                           ROUND(SUM(ordenha_3)::numeric,0)::float          AS ord3,
+                           COUNT(*)::int                                     AS dias
+                    FROM tabla_produccion_historica
+                    GROUP BY DATE_TRUNC('month',fecha)
+                    ORDER BY mes_ord
+                """)
+                df_hist_diaria = read_sql("""
+                    SELECT TO_CHAR(fecha,'DD/MM/YY')           AS dia,
+                           fecha                               AS dia_ord,
+                           total_litros::float                 AS total,
+                           COALESCE(media_litros_vaca,0)::float AS media_vaca
+                    FROM tabla_produccion_historica
+                    ORDER BY dia_ord
+                """)
+                df_yoy_leite = read_sql("""
+                    SELECT
+                        EXTRACT(month FROM fecha)::int AS mes_num,
+                        TO_CHAR(TO_DATE(EXTRACT(month FROM fecha)::text,'MM'),'Mon') AS mes_nome,
+                        ROUND(SUM(CASE WHEN EXTRACT(year FROM fecha) = EXTRACT(year FROM CURRENT_DATE)
+                                       THEN total_litros ELSE 0 END)::numeric,0)::float AS atual,
+                        ROUND(SUM(CASE WHEN EXTRACT(year FROM fecha) = EXTRACT(year FROM CURRENT_DATE)-1
+                                       THEN total_litros ELSE 0 END)::numeric,0)::float AS anterior
+                    FROM tabla_produccion_historica
+                    WHERE EXTRACT(year FROM fecha) IN (
+                        EXTRACT(year FROM CURRENT_DATE), EXTRACT(year FROM CURRENT_DATE)-1)
+                    GROUP BY mes_num, mes_nome
+                    ORDER BY mes_num
+                """)
+                df_yoy_fin = read_sql("""
+                    SELECT
+                        EXTRACT(month FROM fecha)::int AS mes_num,
+                        TO_CHAR(TO_DATE(EXTRACT(month FROM fecha)::text,'MM'),'Mon') AS mes_nome,
+                        ROUND(SUM(CASE WHEN tipo='Receita' AND EXTRACT(year FROM fecha)=EXTRACT(year FROM CURRENT_DATE)
+                                       THEN monto ELSE 0 END)::numeric,0)::float AS rec_atual,
+                        ROUND(SUM(CASE WHEN tipo='Receita' AND EXTRACT(year FROM fecha)=EXTRACT(year FROM CURRENT_DATE)-1
+                                       THEN monto ELSE 0 END)::numeric,0)::float AS rec_anterior,
+                        ROUND(SUM(CASE WHEN tipo='Despesa' AND EXTRACT(year FROM fecha)=EXTRACT(year FROM CURRENT_DATE)
+                                       THEN monto ELSE 0 END)::numeric,0)::float AS desp_atual,
+                        ROUND(SUM(CASE WHEN tipo='Despesa' AND EXTRACT(year FROM fecha)=EXTRACT(year FROM CURRENT_DATE)-1
+                                       THEN monto ELSE 0 END)::numeric,0)::float AS desp_anterior
+                    FROM tabla_finanzas
+                    WHERE EXTRACT(year FROM fecha) IN (
+                        EXTRACT(year FROM CURRENT_DATE), EXTRACT(year FROM CURRENT_DATE)-1)
+                    GROUP BY mes_num, mes_nome
+                    ORDER BY mes_num
+                """)
+                df_yoy_diesel = read_sql("""
+                    SELECT
+                        EXTRACT(month FROM fecha)::int AS mes_num,
+                        TO_CHAR(TO_DATE(EXTRACT(month FROM fecha)::text,'MM'),'Mon') AS mes_nome,
+                        ROUND(SUM(CASE WHEN EXTRACT(year FROM fecha) = EXTRACT(year FROM CURRENT_DATE)
+                                       THEN consumo_litros ELSE 0 END)::numeric,1)::float AS consumo_atual,
+                        ROUND(SUM(CASE WHEN EXTRACT(year FROM fecha) = EXTRACT(year FROM CURRENT_DATE)-1
+                                       THEN consumo_litros ELSE 0 END)::numeric,1)::float AS consumo_anterior,
+                        ROUND(SUM(CASE WHEN EXTRACT(year FROM fecha) = EXTRACT(year FROM CURRENT_DATE)
+                                       THEN COALESCE(total_rs,0) ELSE 0 END)::numeric,0)::float AS custo_atual,
+                        ROUND(SUM(CASE WHEN EXTRACT(year FROM fecha) = EXTRACT(year FROM CURRENT_DATE)-1
+                                       THEN COALESCE(total_rs,0) ELSE 0 END)::numeric,0)::float AS custo_anterior
+                    FROM tabla_diesel
+                    WHERE EXTRACT(year FROM fecha) IN (
+                        EXTRACT(year FROM CURRENT_DATE), EXTRACT(year FROM CURRENT_DATE)-1)
+                    GROUP BY mes_num, mes_nome
+                    ORDER BY mes_num
+                """)
+                err_hist = None
+            except Exception as exc:
+                err_hist = str(exc)
+
+            if err_hist:
+                ui.label(f"Error: {err_hist}").classes("text-red m-4")
+            else:
+                # ── KPIs ──────────────────────────────────────────────────────
+                total_periodo = int(df_hist_mes["total"].sum()) if not df_hist_mes.empty else 0
+                media_dia     = round(float(df_hist_diaria["total"].mean()), 1) if not df_hist_diaria.empty else 0
+                mejor_mes_row = df_hist_mes.loc[df_hist_mes["total"].idxmax()] if not df_hist_mes.empty else None
+                mejor_mes_txt = f"{mejor_mes_row['mes']} ({int(mejor_mes_row['total']):,} L)" if mejor_mes_row is not None else "—"
+                n_meses = len(df_hist_mes)
+
+                with ui.row().classes("gap-4 px-2 mt-3 flex-wrap"):
+                    for titulo, valor, icono in [
+                        ("Total do período",   f"{total_periodo:,} L",  "🥛"),
+                        ("Média diária",        f"{media_dia:,} L/dia",  "📅"),
+                        ("Melhor mês",          mejor_mes_txt,           "🏆"),
+                        ("Meses registrados",  str(n_meses),             "📆"),
+                    ]:
+                        with ui.card().classes("flex-1 min-w-36 p-4 text-center"):
+                            ui.label(f"{icono} {titulo}").classes("text-xs text-grey-5 uppercase tracking-widest mb-1")
+                            ui.label(valor).classes("text-xl font-bold text-blue-700")
+
+                # ── Gráfico 1: producción total por mes ───────────────────────
+                with ui.row().classes("w-full gap-4 px-2 mt-3"):
+                    with ui.card().classes("flex-1"):
+                        ui.label("Produção total por mês").classes("font-bold mb-1")
+                        ui.label("Litros totais ordenhados em cada mês do histórico.").classes("help-text mb-2")
+                        if not df_hist_mes.empty:
+                            ui.echart({
+                                "tooltip": {"trigger": "axis", "formatter": "{b}: {c} L"},
+                                "xAxis": {"type": "category", "data": list(df_hist_mes["mes"]),
+                                          "axisLabel": {"rotate": 35, "fontSize": 10}},
+                                "yAxis": {"type": "value", "name": "Litros"},
+                                "series": [{
+                                    "type": "bar", "data": list(df_hist_mes["total"]),
+                                    "itemStyle": {"color": "#0ea5e9"},
+                                    "barMaxWidth": 40,
+                                    "label": {"show": True, "position": "top",
+                                              "formatter": "{c}", "fontSize": 9},
+                                }],
+                            }).classes("w-full h-64")
+
+                    with ui.card().classes("flex-1"):
+                        ui.label("Sessões de ordenha por mês (O1 + O2 + O3)").classes("font-bold mb-1")
+                        ui.label("Composição da produção por cada turno de ordenha.").classes("help-text mb-2")
+                        if not df_hist_mes.empty:
+                            colors = ["#3b82f6", "#22c55e", "#f59e0b"]
+                            series = []
+                            for col, name, color in [("ord1","Ordenha 1",colors[0]),
+                                                      ("ord2","Ordenha 2",colors[1]),
+                                                      ("ord3","Ordenha 3",colors[2])]:
+                                vals = df_hist_mes[col].fillna(0).tolist()
+                                series.append({"type": "bar", "name": name, "stack": "total",
+                                               "data": vals, "itemStyle": {"color": color}})
+                            ui.echart({
+                                "tooltip": {"trigger": "axis", "axisPointer": {"type": "shadow"}},
+                                "legend": {"bottom": 0},
+                                "xAxis": {"type": "category", "data": list(df_hist_mes["mes"]),
+                                          "axisLabel": {"rotate": 35, "fontSize": 10}},
+                                "yAxis": {"type": "value", "name": "Litros"},
+                                "series": series,
+                            }).classes("w-full h-64")
+
+                # ── Gráfico 2: media diaria + L/vaca ──────────────────────────
+                with ui.row().classes("w-full gap-4 px-2 mt-2"):
+                    with ui.card().classes("flex-1"):
+                        ui.label("Média diária e L/Vaca por mês").classes("font-bold mb-1")
+                        ui.label("Evolução da eficiência produtiva ao longo do tempo.").classes("help-text mb-2")
+                        if not df_hist_mes.empty:
+                            media_vaca_vals = [v if v and v > 0 else None
+                                               for v in df_hist_mes["media_vaca"].tolist()]
+                            ui.echart({
+                                "tooltip": {"trigger": "axis"},
+                                "legend": {"bottom": 0},
+                                "xAxis": {"type": "category", "data": list(df_hist_mes["mes"]),
+                                          "axisLabel": {"rotate": 35, "fontSize": 10}},
+                                "yAxis": [
+                                    {"type": "value", "name": "L/dia", "position": "left"},
+                                    {"type": "value", "name": "L/vaca", "position": "right"},
+                                ],
+                                "series": [
+                                    {"type": "line", "name": "Media diária (L)",
+                                     "data": list(df_hist_mes["media_diaria"]),
+                                     "smooth": True, "yAxisIndex": 0,
+                                     "itemStyle": {"color": "#0ea5e9"}},
+                                    {"type": "line", "name": "L/Vaca",
+                                     "data": media_vaca_vals,
+                                     "smooth": True, "yAxisIndex": 1,
+                                     "itemStyle": {"color": "#f59e0b"},
+                                     "lineStyle": {"type": "dashed"}},
+                                ],
+                            }).classes("w-full h-64")
+
+                    with ui.card().classes("flex-1"):
+                        ui.label("Produção diária — histórico completo").classes("font-bold mb-1")
+                        ui.label("Cada ponto representa o total de litros de um dia.").classes("help-text mb-2")
+                        if not df_hist_diaria.empty:
+                            step = max(1, len(df_hist_diaria) // 30)
+                            ui.echart({
+                                "tooltip": {"trigger": "axis"},
+                                "xAxis": {"type": "category", "data": list(df_hist_diaria["dia"]),
+                                          "axisLabel": {"interval": step - 1, "rotate": 35, "fontSize": 9}},
+                                "yAxis": {"type": "value", "name": "Litros"},
+                                "dataZoom": [{"type": "slider", "bottom": 30, "height": 18}],
+                                "series": [{
+                                    "type": "line", "data": list(df_hist_diaria["total"]),
+                                    "smooth": True, "symbol": "none",
+                                    "areaStyle": {"opacity": 0.25},
+                                    "itemStyle": {"color": "#8b5cf6"},
+                                }],
+                            }).classes("w-full h-64")
+
+                # ── Tabla resumen mensual ──────────────────────────────────────
+                with ui.card().classes("mx-2 mt-2"):
+                    ui.label("Resumo mensal detalhado").classes("font-bold mb-2")
+                    if not df_hist_mes.empty:
+                        df_tabla = df_hist_mes[["mes","total","media_diaria","media_vaca","dias"]].copy()
+                        df_tabla.columns = ["Mês","Total Litros","Média Diária","L/Vaca","Dias"]
+                        df_to_table(df_tabla, pagination=20)
+
+                # ── Comparação Ano a Ano ───────────────────────────────────────
+                ano_a = date.today().year
+                ano_b = ano_a - 1
+                ui.separator().classes("mx-2 mt-6")
+                with ui.row().classes("w-full px-2 mt-3 mb-1 items-center"):
+                    ui.label("Comparação Ano a Ano").classes("text-lg font-bold text-grey-7")
+                    ui.label(f"— {ano_b} vs {ano_a}").classes("text-sm text-grey-5 ml-1")
+                    ui.space()
+                    ui.label("Totais calculados apenas nos meses com dados em ambos os anos.").classes("text-xs text-grey-5 italic")
+
+                yoy_ok = not df_yoy_leite.empty and not df_yoy_fin.empty
+                if yoy_ok:
+                    ov_l = df_yoy_leite[(df_yoy_leite["atual"] > 0) & (df_yoy_leite["anterior"] > 0)]
+                    ov_f = df_yoy_fin[
+                        ((df_yoy_fin["rec_anterior"] + df_yoy_fin["desp_anterior"]) > 0) &
+                        ((df_yoy_fin["rec_atual"]    + df_yoy_fin["desp_atual"])    > 0)
+                    ]
+                    n_ov_l, n_ov_f = len(ov_l), len(ov_f)
+
+                    tot_l_a = float(ov_l["atual"].sum())
+                    tot_l_b = float(ov_l["anterior"].sum())
+
+                    def _pct(a, b): return round((a - b) / b * 100, 1) if b else None
+                    def _fmt(d, lower_is_better=False):
+                        if d is None: return "—", "text-grey-5"
+                        good  = (d <= 0) if lower_is_better else (d >= 0)
+                        arrow = "▲" if d >= 0 else "▼"
+                        return f"{arrow} {abs(d):.1f}%", "text-green-600" if good else "text-red-500"
+
+                    d_l, c_l = _fmt(_pct(tot_l_a, tot_l_b))
+
+                    # diesel overlap
+                    ov_d  = df_yoy_diesel[(df_yoy_diesel["consumo_atual"] > 0) & (df_yoy_diesel["consumo_anterior"] > 0)]
+                    n_ov_d = len(ov_d)
+                    if n_ov_d > 0:
+                        cons_a = float(ov_d["consumo_atual"].sum())
+                        cons_b = float(ov_d["consumo_anterior"].sum())
+                        cust_a = float(ov_d["custo_atual"].sum())
+                        cust_b = float(ov_d["custo_anterior"].sum())
+                        d_cons, c_cons = _fmt(_pct(cons_a, cons_b), lower_is_better=True)
+
+                    with ui.row().classes("w-full gap-3 px-2 flex-wrap"):
+                        with ui.card().classes("flex-1 min-w-52 p-4 text-center"):
+                            ui.label("Produção de leite").classes("text-xs text-grey-5 uppercase tracking-widest mb-1")
+                            ui.label(d_l).classes(f"text-2xl font-bold {c_l}")
+                            ui.label(f"{int(tot_l_a):,} L  vs  {int(tot_l_b):,} L").classes("text-xs text-grey-5 mt-1")
+                            ui.label(f"{n_ov_l} meses comparáveis").classes("text-xs text-grey-4 mt-1")
+
+                        if n_ov_d > 0:
+                            with ui.card().classes("flex-1 min-w-52 p-4 text-center"):
+                                ui.label("Diesel — consumo").classes("text-xs text-grey-5 uppercase tracking-widest mb-1")
+                                ui.label(d_cons).classes(f"text-2xl font-bold {c_cons}")
+                                ui.label(f"{cons_a:,.0f} L  vs  {cons_b:,.0f} L").classes("text-xs text-grey-5 mt-1")
+                                custo_delta = f"R$ {int(cust_a):,}  vs  R$ {int(cust_b):,}" if cust_b else ""
+                                if custo_delta:
+                                    ui.label(custo_delta).classes("text-xs text-grey-4")
+                                ui.label(f"{n_ov_d} meses comparáveis").classes("text-xs text-grey-4 mt-1")
+
+                        if n_ov_f > 0:
+                            rec_a  = float(ov_f["rec_atual"].sum())
+                            rec_b  = float(ov_f["rec_anterior"].sum())
+                            desp_a = float(ov_f["desp_atual"].sum())
+                            desp_b = float(ov_f["desp_anterior"].sum())
+                            d_rec,  c_rec  = _fmt(_pct(rec_a,  rec_b))
+                            d_desp, c_desp = _fmt(_pct(desp_a, desp_b), lower_is_better=True)
+                            for titulo, txt, color, sub in [
+                                ("Receitas",  d_rec,  c_rec,
+                                 f"R$ {int(rec_a):,}  vs  R$ {int(rec_b):,}"),
+                                ("Despesas",  d_desp, c_desp,
+                                 f"R$ {int(desp_a):,}  vs  R$ {int(desp_b):,}"),
+                            ]:
+                                with ui.card().classes("flex-1 min-w-52 p-4 text-center"):
+                                    ui.label(titulo).classes("text-xs text-grey-5 uppercase tracking-widest mb-1")
+                                    ui.label(txt).classes(f"text-2xl font-bold {color}")
+                                    ui.label(sub).classes("text-xs text-grey-5 mt-1")
+                                    ui.label(f"{n_ov_f} meses comparáveis").classes("text-xs text-grey-4 mt-1")
+                        else:
+                            with ui.card().classes("flex-2 min-w-64 p-4 text-center bg-grey-1"):
+                                ui.label("Receitas e Despesas").classes("text-xs text-grey-5 uppercase tracking-widest mb-1")
+                                ui.label("Sem meses comparáveis ainda").classes("text-base text-grey-5 font-medium")
+                                ui.label(f"Dados financeiros de {ano_b} e {ano_a} não se sobrepõem em nenhum mês.").classes("text-xs text-grey-4 mt-1")
+
+                    meses_l = list(df_yoy_leite["mes_nome"])
+                    meses_f = list(df_yoy_fin["mes_nome"])
+                    meses_d = list(df_yoy_diesel["mes_nome"]) if not df_yoy_diesel.empty else []
+
+                    # linha 1: leite + diesel
+                    with ui.row().classes("w-full gap-4 px-2 mt-3"):
+                        with ui.card().classes("flex-1"):
+                            ui.label(f"Produção de leite — {ano_b} vs {ano_a}").classes("font-bold mb-1")
+                            ui.label("Litros totais por mês em cada ano.").classes("help-text mb-2")
+                            ui.echart({
+                                "tooltip": {"trigger": "axis"},
+                                "legend": {"data": [str(ano_b), str(ano_a)], "bottom": 0},
+                                "xAxis": {"type": "category", "data": meses_l},
+                                "yAxis": {"type": "value", "name": "Litros"},
+                                "series": [
+                                    {"name": str(ano_b), "type": "bar",
+                                     "data": list(df_yoy_leite["anterior"]),
+                                     "itemStyle": {"color": "#94a3b8"}, "barMaxWidth": 35},
+                                    {"name": str(ano_a), "type": "bar",
+                                     "data": list(df_yoy_leite["atual"]),
+                                     "itemStyle": {"color": "#0ea5e9"}, "barMaxWidth": 35},
+                                ],
+                            }).classes("w-full h-64")
+
+                        if meses_d:
+                            with ui.card().classes("flex-1"):
+                                ui.label(f"Consumo de diesel — {ano_b} vs {ano_a}").classes("font-bold mb-1")
+                                ui.label("Litros consumidos por mês em cada ano.").classes("help-text mb-2")
+                                ui.echart({
+                                    "tooltip": {"trigger": "axis"},
+                                    "legend": {"data": [str(ano_b), str(ano_a)], "bottom": 0},
+                                    "xAxis": {"type": "category", "data": meses_d},
+                                    "yAxis": {"type": "value", "name": "Litros"},
+                                    "series": [
+                                        {"name": str(ano_b), "type": "bar",
+                                         "data": list(df_yoy_diesel["consumo_anterior"]),
+                                         "itemStyle": {"color": "#94a3b8"}, "barMaxWidth": 35},
+                                        {"name": str(ano_a), "type": "bar",
+                                         "data": list(df_yoy_diesel["consumo_atual"]),
+                                         "itemStyle": {"color": "#f59e0b"}, "barMaxWidth": 35},
+                                    ],
+                                }).classes("w-full h-64")
+
+                    # linha 2: finanças
+                    with ui.row().classes("w-full gap-4 px-2 mt-2 pb-6"):
+                        with ui.card().classes("w-full"):
+                            ui.label(f"Receitas e despesas — {ano_b} vs {ano_a}").classes("font-bold mb-1")
+                            ui.label(f"Linha sólida = {ano_a} · Tracejada = {ano_b}.").classes("help-text mb-2")
+                            ui.echart({
+                                "tooltip": {"trigger": "axis"},
+                                "legend": {"data": [f"Receita {ano_b}", f"Receita {ano_a}",
+                                                    f"Despesa {ano_b}", f"Despesa {ano_a}"],
+                                           "bottom": 0, "type": "scroll"},
+                                "xAxis": {"type": "category", "data": meses_f},
+                                "yAxis": {"type": "value", "name": "R$"},
+                                "series": [
+                                    {"name": f"Receita {ano_b}", "type": "line",
+                                     "data": list(df_yoy_fin["rec_anterior"]),
+                                     "smooth": True, "symbolSize": 6,
+                                     "itemStyle": {"color": "#86efac"},
+                                     "lineStyle": {"type": "dashed", "width": 2}},
+                                    {"name": f"Receita {ano_a}", "type": "line",
+                                     "data": list(df_yoy_fin["rec_atual"]),
+                                     "smooth": True, "symbolSize": 6,
+                                     "itemStyle": {"color": "#16a34a"},
+                                     "lineStyle": {"width": 2}},
+                                    {"name": f"Despesa {ano_b}", "type": "line",
+                                     "data": list(df_yoy_fin["desp_anterior"]),
+                                     "smooth": True, "symbolSize": 6,
+                                     "itemStyle": {"color": "#fca5a5"},
+                                     "lineStyle": {"type": "dashed", "width": 2}},
+                                    {"name": f"Despesa {ano_a}", "type": "line",
+                                     "data": list(df_yoy_fin["desp_atual"]),
+                                     "smooth": True, "symbolSize": 6,
+                                     "itemStyle": {"color": "#ef4444"},
+                                     "lineStyle": {"width": 2}},
+                                ],
+                            }).classes("w-full h-56")
+                else:
+                    estado_vacio("Dados insuficientes para comparação ano a ano.",
+                                 "Necessário ter registros em ambos os anos.")
 
 
 # ── FICHA INDIVIDUAL DE VACA ─────────────────────────────────────────────────
