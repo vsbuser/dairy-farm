@@ -3021,14 +3021,19 @@ def reportes_page() -> None:
                             ui.label(f"{n_ov_l} meses comparáveis").classes("text-xs text-grey-4 mt-1")
 
                         if n_ov_d > 0:
+                            d_cust, c_cust = _fmt(_pct(cust_a, cust_b), lower_is_better=True)
                             with ui.card().classes("flex-1 min-w-52 p-4 text-center"):
-                                ui.label("Diesel — consumo").classes("text-xs text-grey-5 uppercase tracking-widest mb-1")
-                                ui.label(d_cons).classes(f"text-2xl font-bold {c_cons}")
-                                ui.label(f"{cons_a:,.0f} L  vs  {cons_b:,.0f} L").classes("text-xs text-grey-5 mt-1")
-                                custo_delta = f"R$ {int(cust_a):,}  vs  R$ {int(cust_b):,}" if cust_b else ""
-                                if custo_delta:
-                                    ui.label(custo_delta).classes("text-xs text-grey-4")
-                                ui.label(f"{n_ov_d} meses comparáveis").classes("text-xs text-grey-4 mt-1")
+                                ui.label("Diesel").classes("text-xs text-grey-5 uppercase tracking-widest mb-2")
+                                with ui.row().classes("justify-center gap-6 w-full"):
+                                    with ui.column().classes("items-center gap-0"):
+                                        ui.label("consumo").classes("text-xs text-grey-4 uppercase")
+                                        ui.label(d_cons).classes(f"text-xl font-bold {c_cons}")
+                                        ui.label(f"{cons_a:,.0f} L  vs  {cons_b:,.0f} L").classes("text-xs text-grey-5")
+                                    with ui.column().classes("items-center gap-0"):
+                                        ui.label("custo").classes("text-xs text-grey-4 uppercase")
+                                        ui.label(d_cust).classes(f"text-xl font-bold {c_cust}")
+                                        ui.label(f"R$ {int(cust_a):,}  vs  R$ {int(cust_b):,}").classes("text-xs text-grey-5")
+                                ui.label(f"{n_ov_d} meses comparáveis").classes("text-xs text-grey-4 mt-2")
 
                         if n_ov_f > 0:
                             rec_a  = float(ov_f["rec_atual"].sum())
